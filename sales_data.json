@@ -1,0 +1,37 @@
+[
+  {
+    "menu": "ลาเต้น้ำผึ้ง",
+    "quantity": 5,
+    "price": 65,
+    "total": 325,
+    "timestamp": "2026-05-14T14:37:59.145589"
+  },
+  {
+    "menu": "ชาไทย",
+    "quantity": 3,
+    "price": 55,
+    "total": 165,
+    "timestamp": "2026-05-14T14:40:09.602725"
+  },
+  {
+    "menu": "ลาเต้น้ำผึ้ง",
+    "quantity": 5,
+    "price": 65,
+    "total": 325,
+    "timestamp": "2026-05-14T14:45:32.733952"
+  },
+  {
+    "menu": "ชาไทย",
+    "quantity": 3,
+    "price": 55,
+    "total": 165,
+    "timestamp": "2026-05-14T14:46:26.003594"
+  },
+  {
+    "menu": "Test Menu",
+    "quantity": 3,
+    "price": 60.0,
+    "total": 180.0,
+    "timestamp": "2026-05-16T10:43:02.445446"
+  }
+]

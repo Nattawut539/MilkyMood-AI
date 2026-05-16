@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import argparse
 import os
-import requests
-from collections import Counter
+import traceback
 from datetime import datetime
+from collections import Counter
 
 import gspread
+import requests
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 
@@ -41,48 +42,74 @@ def get_worksheet():
     return worksheet
 
 
-def summarize_for_date(rows: list[dict], target_date: str) -> dict:
-    today_rows = []
-
-    for row in rows:
-        if str(row.get("date", "")).strip() == target_date:
-            today_rows.append(row)
-
+def get_summary_all(rows: list[dict]) -> dict:
+    """สรุปยอดขายทั้งหมด"""
     total_sales = 0
     menu_counter = Counter()
+    date_counter = Counter()
+    all_menus = {}
 
-    for row in today_rows:
+    for row in rows:
         menu = str(row.get("menu", "")).strip()
-
         quantity = int(float(row.get("quantity", 0) or 0))
         total = float(row.get("total", 0) or 0)
+        date = str(row.get("date", "")).strip()
 
-        total_sales += total
-        menu_counter[menu] += quantity
+        if menu and total > 0:
+            total_sales += total
+            menu_counter[menu] += quantity
+            date_counter[date] += 1
+            
+            if menu not in all_menus:
+                all_menus[menu] = {"quantity": 0, "sales": 0}
+            all_menus[menu]["quantity"] += quantity
+            all_menus[menu]["sales"] += total
 
     best_seller = "-"
     if menu_counter:
         best_seller = menu_counter.most_common(1)[0][0]
 
     return {
-        "date": target_date,
-        "order_count": len(today_rows),
         "total_sales": total_sales,
+        "order_count": sum(date_counter.values()),
+        "unique_dates": len(date_counter),
         "best_seller": best_seller,
+        "all_menus": all_menus,
     }
 
 
 def build_report(summary: dict) -> str:
-    return (
-        "MilkyAI Morning Report 🥛\n"
-        f"วันที่: {summary['date']}\n"
-        f"จำนวนรายการขาย: {summary['order_count']} รายการ\n"
-        f"ยอดขายรวม: {summary['total_sales']:.2f} บาท\n"
-        f"เมนูขายดี: {summary['best_seller']}"
+    """สร้างรายงานสรุปทั้งหมด"""
+    report = (
+        "📊 รายงานยอดขายทั้งหมด\n"
+        f"{'='*40}\n"
+        f"ยอดขายรวมทั้งหมด: {summary['total_sales']:.2f} บาท\n"
+        f"จำนวนรายการขายทั้งหมด: {summary['order_count']} รายการ\n"
+        f"จำนวนวันขาย: {summary['unique_dates']} วัน\n"
+        f"เมนูขายดี: {summary['best_seller']}\n"
+        f"{'='*40}\n\n"
+        "📋 รายละเอียดเมนู:\n"
     )
+
+    # เรียงลำดับเมนูตามยอดขาย
+    sorted_menus = sorted(
+        summary['all_menus'].items(),
+        key=lambda x: x[1]['sales'],
+        reverse=True
+    )
+
+    for idx, (menu, stats) in enumerate(sorted_menus, 1):
+        report += (
+            f"{idx}. {menu}\n"
+            f"   จำนวน: {stats['quantity']} แก้ว\n"
+            f"   ยอดขาย: {stats['sales']:.2f} บาท\n"
+        )
+
+    return report
 
 
 def send_telegram_alert(message: str) -> None:
+    """ส่งรายงานไปยัง Telegram"""
     load_dotenv()
 
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -111,12 +138,7 @@ def send_telegram_alert(message: str) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="สรุปยอดขายจาก Google Sheet")
-    parser.add_argument(
-        "--date",
-        default=datetime.now().strftime("%Y-%m-%d"),
-        help="วันที่ที่ต้องการสรุป รูปแบบ YYYY-MM-DD",
-    )
+    parser = argparse.ArgumentParser(description="สรุปยอดขายทั้งหมดพร้อมส่ง Telegram")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -129,19 +151,25 @@ def main():
         worksheet = get_worksheet()
         rows = worksheet.get_all_records()
 
-        summary = summarize_for_date(rows, args.date)
+        if not rows:
+            print("✗ ยังไม่มีข้อมูลในแผ่นงาน")
+            return
+
+        summary = get_summary_all(rows)
         report = build_report(summary)
 
         print(report)
 
         if args.dry_run:
-            print("\nDRY RUN: ยังไม่ส่ง Telegram")
+            print("DRY RUN: ยังไม่ส่ง Telegram")
         else:
+            print("\n📤 กำลังส่งรายงานไปยัง Telegram...")
             send_telegram_alert(report)
-            print("\n✓ ส่งรายงานเข้า Telegram สำเร็จ")
+            print("✓ ส่งรายงานเข้า Telegram สำเร็จ")
 
     except Exception as error:
         print(f"✗ เกิดข้อผิดพลาด: {error}")
+        traceback.print_exc()
 
 
 if __name__ == "__main__":

@@ -224,6 +224,11 @@ __marimo__/
 .env.example
 service-account.json
 credentials.json
+credentials.b64
 *.key
 *.pem
 *.p12
+
+# Agent trace logs
+agent_trace.log
+trace_logs/

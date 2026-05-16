@@ -4,16 +4,19 @@ from datetime import datetime
 import requests
 from dotenv import load_dotenv
 
-load_dotenv()
-
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
 
 def send_sale_notification(menu: str, quantity: int, price: float, total: float) -> bool:
     """ส่ง Telegram notification เมื่อมีการบันทึกยอดขาย"""
     try:
+        # โหลดตัวแปรสภาพแวดล้อม ที่เวลาของการเรียกฟังก์ชัน ไม่ใช่เวลานำเข้า
+        load_dotenv()
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        
+        if not bot_token or not chat_id:
+            print("❌ ไม่พบ TELEGRAM_BOT_TOKEN หรือ TELEGRAM_CHAT_ID")
+            return False
+        
         timestamp = datetime.now().strftime("%H:%M:%S")
         
         message = (
@@ -24,13 +27,15 @@ def send_sale_notification(menu: str, quantity: int, price: float, total: float)
             f"💵 รวม: {total} บาท"
         )
         
+        telegram_api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        
         payload = {
-            "chat_id": CHAT_ID,
+            "chat_id": chat_id,
             "text": message,
             "parse_mode": "HTML",
         }
         
-        response = requests.post(TELEGRAM_API_URL, json=payload)
+        response = requests.post(telegram_api_url, json=payload)
         
         if response.status_code == 200:
             return True

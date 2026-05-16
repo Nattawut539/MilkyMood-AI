@@ -26,5 +26,12 @@
     "price": 55,
     "total": 165,
     "timestamp": "2026-05-14T14:46:26.003594"
+  },
+  {
+    "menu": "Test Menu",
+    "quantity": 3,
+    "price": 60.0,
+    "total": 180.0,
+    "timestamp": "2026-05-16T10:43:02.445446"
   }
 ]

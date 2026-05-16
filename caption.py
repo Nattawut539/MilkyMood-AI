@@ -1,4 +1,4 @@
-# Caption generator for MilkLab cafe Instagram posts
+# Caption generator for MilkyMood cafe Instagram posts
 # - Load GOOGLE_API_KEY from .env file
 # - Use Gemini 2.5 Flash to generate 3 caption variants
 # - Take menu name and price as input
@@ -44,7 +44,7 @@ def load_api_key() -> str:
 
 def build_prompt(menu_name: str, price: str) -> str:
     return (
-        "You are a creative caption writer for MilkLab cafe Instagram posts.\n"
+        "You are a creative caption writer for MilkyMood cafe Instagram posts.\n"
         f"Create 3 caption variants for the menu item '{menu_name}' priced at {price}.\n"
         "Write the captions in Thai using a friendly, casual tone.\n"
         "Use three distinct styles: cute, minimal, and gen-z.\n"
@@ -185,7 +185,7 @@ def generate_captions(menu_name: str, price: str) -> dict[str, str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="สร้าง 3 แบบคำบรรยายสำหรับโพสต์ Instagram ของคาเฟ่ MilkLab"
+        description="สร้าง 3 แบบคำบรรยายสำหรับโพสต์ Instagram ของคาเฟ่ MilkyMood"
     )
     parser.add_argument("menu_name", help="ชื่อเมนู")
     parser.add_argument("price", help="ราคาเมนู")

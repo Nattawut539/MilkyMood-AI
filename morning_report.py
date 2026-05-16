@@ -89,23 +89,25 @@ def send_telegram_alert(message: str) -> None:
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
     if not bot_token:
-        raise RuntimeError("ไม่พบ TELEGRAM_BOT_TOKEN ในไฟล์ .env")
+        raise RuntimeError("ไม่พบ TELEGRAM_BOT_TOKEN ในตัวแปรสภาพแวดล้อม")
 
     if not chat_id:
-        raise RuntimeError("ไม่พบ TELEGRAM_CHAT_ID ในไฟล์ .env")
+        raise RuntimeError("ไม่พบ TELEGRAM_CHAT_ID ในตัวแปรสภาพแวดล้อม")
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
-    response = requests.post(
-        url,
-        data={
-            "chat_id": chat_id,
-            "text": message,
-        },
-        timeout=15,
-    )
-
-    response.raise_for_status()
+    try:
+        response = requests.post(
+            url,
+            data={
+                "chat_id": chat_id,
+                "text": message,
+            },
+            timeout=15,
+        )
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"ล้มเหลวในการส่ง Telegram: {e}")
 
 
 def main():

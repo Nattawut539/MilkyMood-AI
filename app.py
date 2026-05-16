@@ -8,7 +8,7 @@ from google import genai
 from rag_engine import RAGEngine
 
 load_dotenv()
-client = genai.Client(api_key=os.getenv("AIzaSyDYCbnUNBTq9141Nog9xJPxkuhKTsLNvfk"))
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 MODEL = "gemini-2.5-flash"
 
 

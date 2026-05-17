@@ -829,6 +829,7 @@ with planner_tab:
 
     theme = st.radio("อยากไปเที่ยวไหน", ["ทะเล", "ภูเขา", "ยังไม่แน่ใจ"], horizontal=True, key="theme_radio")
     province_options = get_province_options(theme)
+    available_provinces = province_options[1:]
 
     with st.form("planner_form"):
         c1, c2, c3 = st.columns(3)
@@ -837,7 +838,7 @@ with planner_tab:
             people = st.number_input("ไปกี่คน", min_value=1, max_value=30, value=2, step=1)
             days = st.number_input("ไปกี่วัน", min_value=1, max_value=10, value=2, step=1)
         with c2:
-            budget = st.number_input("งบรวมทั้งหมด (บาท)", min_value=0, max_value=500000, value=5000, step=500)
+            budget = st.number_input("งบรวมทั้งหมด (บาท)", min_value=0, max_value=5000000, value=5000, step=500)
             style = st.selectbox("สไตล์งบ", ["ประหยัด", "สมดุล", "สบาย"])
             transport = st.selectbox("การเดินทาง", ["ไม่มีรถส่วนตัว", "มีรถส่วนตัว", "เครื่องบิน/รถเช่า", "ยังไม่แน่ใจ"])
         with c3:
@@ -904,18 +905,14 @@ with compare_tab:
 
 with highlights_tab:
     st.subheader("จังหวัดและไฮไลท์ที่ระบบรู้จัก")
+    filter_type = st.radio(
+        "กรองตามแนวเที่ยว",
+        ["ทั้งหมด", "ทะเล", "ภูเขา"],
+        horizontal=True,
+        key="highlight_filter",
+    )
 
-    # ใช้ค่าเดียวกับปุ่ม "อยากไปเที่ยวไหน" ในแท็บวางแพลน
-    # เพื่อให้ dropdown จังหวัดที่สนใจ และหน้าไฮไลท์จังหวัด แสดงจังหวัดชุดเดียวกัน
-    selected_theme_from_planner = st.session_state.get("theme_radio", "ยังไม่แน่ใจ")
-    shown = get_destinations_by_theme(selected_theme_from_planner)
-
-    if selected_theme_from_planner == "ยังไม่แน่ใจ":
-        st.info("ตอนนี้เลือก 'ยังไม่แน่ใจ' ในหน้าวางแพลน ทั้งช่องจังหวัดที่สนใจและหน้าไฮไลท์จึงแสดงจังหวัดทั้งหมด")
-    else:
-        st.info(f"ตอนนี้เลือก '{selected_theme_from_planner}' ในหน้าวางแพลน ทั้งช่องจังหวัดที่สนใจและหน้าไฮไลท์จึงแสดงเฉพาะจังหวัดสาย{selected_theme_from_planner}เหมือนกัน")
-
-    st.caption(f"พบทั้งหมด {len(shown)} จังหวัด เท่ากับจำนวนจังหวัดในช่อง ‘จังหวัดที่สนใจ’ ไม่รวมตัวเลือก ‘ยังไม่ระบุ’")
+    shown = get_filtered_destinations(filter_type)
 
     for i in range(0, len(shown), 2):
         cols = st.columns(2)

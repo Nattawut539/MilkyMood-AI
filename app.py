@@ -631,12 +631,19 @@ def log_trip_if_possible(req: TripRequest, province: str, estimate_total: int) -
             days=req.days,
             total_estimate=estimate_total,
         )
+
         sheet = "บันทึก Google Sheet แล้ว" if result.get("sheet_uploaded") else "ยังบันทึก Google Sheet ไม่สำเร็จ"
-        telegram = "แจ้ง Telegram แล้ว" if result.get("telegram_sent") else "ยังแจ้ง Telegram ไม่สำเร็จ"
+
+        if result.get("telegram_sent"):
+            telegram = "แจ้ง Telegram แล้ว"
+        else:
+            telegram_error = result.get("telegram_error", "ไม่ทราบสาเหตุ")
+            telegram = f"ยังแจ้ง Telegram ไม่สำเร็จ: {telegram_error}"
+
         return f"{sheet} และ {telegram}"
+
     except Exception as e:
         return f"ยังบันทึกจริงไม่สำเร็จ: {e}"
-
 
 def render_destination_card(province: str) -> None:
     data = DESTINATIONS[province]

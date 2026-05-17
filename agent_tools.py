@@ -37,6 +37,7 @@ def log_trip_interest(
             "total_estimate": total_estimate or budget,
             "sheet_uploaded": False,
             "telegram_sent": False,
+            "telegram_error": "ไม่พบฟังก์ชัน add_trip_interest",
         }
 
     row = add_trip_interest(
@@ -50,6 +51,8 @@ def log_trip_interest(
     )
 
     telegram_sent = False
+    telegram_error = ""
+
     if send_telegram_message:
         try:
             send_telegram_message(
@@ -65,9 +68,14 @@ def log_trip_interest(
                 "✅ บันทึกลง Google Sheet แล้ว"
             )
             telegram_sent = True
+
         except Exception as e:
-            print(f"Telegram error: {e}")
+            telegram_error = str(e)
+            print(f"Telegram error: {telegram_error}")
             telegram_sent = False
+    else:
+        telegram_error = "ไม่พบฟังก์ชัน send_telegram_message จาก telegram_notifier.py"
+        print(f"Telegram error: {telegram_error}")
 
     return {
         "date": row[0],
@@ -80,6 +88,7 @@ def log_trip_interest(
         "total_estimate": row[7],
         "sheet_uploaded": True,
         "telegram_sent": telegram_sent,
+        "telegram_error": telegram_error,
     }
 
 

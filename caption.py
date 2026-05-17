@@ -1,9 +1,5 @@
-# Caption generator for MilkyMood cafe Instagram posts
-# - Load GOOGLE_API_KEY from .env file
-# - Use Gemini 2.5 Flash to generate 3 caption variants
-# - Take menu name and price as input
-# - Output: 3 caption styles (cute, minimal, gen-z)
-
+# caption.py
+# Caption generator for TripMate Thailand AI travel posts
 from __future__ import annotations
 
 import argparse
@@ -11,23 +7,18 @@ import json
 import os
 import re
 import time
+import warnings
 
 from dotenv import load_dotenv
-import warnings
 
 try:
     import google.genai as genai
     USE_NEW_SDK = True
 except ModuleNotFoundError:
-    warnings.filterwarnings(
-        "ignore",
-        message="All support for the `google.generativeai` package has ended.*",
-        category=FutureWarning,
-    )
-    import google.generativeai as genai  # fallback for older environments
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import google.generativeai as genai
     USE_NEW_SDK = False
 
-MODEL_NAME = os.getenv("GOOGLE_MODEL_NAME", "models/gemini-2.5-flash")
 MODEL_NAME = os.getenv("GOOGLE_MODEL_NAME", "models/gemini-2.5-flash-lite")
 FALLBACK_MODEL_NAME = os.getenv("GOOGLE_FALLBACK_MODEL_NAME", "")
 MAX_RETRIES = 3
@@ -38,41 +29,35 @@ def load_api_key() -> str:
     load_dotenv()
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        raise RuntimeError("หา GOOGLE_API_KEY ในไฟล์ .env ไม่เจอเลย")
+        raise RuntimeError("หา GOOGLE_API_KEY ในไฟล์ .env ไม่เจอ")
     return api_key
 
 
-def build_prompt(menu_name: str, price: str) -> str:
+def build_prompt(trip_name: str, budget: str) -> str:
     return (
-        "You are a creative caption writer for MilkyMood cafe Instagram posts.\n"
-        f"Create 3 caption variants for the menu item '{menu_name}' priced at {price}.\n"
-        "Write the captions in Thai using a friendly, casual tone.\n"
-        "Use three distinct styles: cute, minimal, and gen-z.\n"
-        "Return the response as valid JSON with keys: cute, minimal, gen-z.\n"
-        "Do not include any additional explanation, headers, or commentary."
+        "You are a creative Thai travel caption writer for TripMate Thailand AI.\n"
+        f"Create 3 caption variants for this travel idea: '{trip_name}' with estimated budget {budget} THB.\n"
+        "Write in Thai with a friendly tone.\n"
+        "Styles: cute, minimal, gen-z.\n"
+        "Mention that the budget is an estimate if needed.\n"
+        "Return valid JSON only with keys: cute, minimal, gen-z."
     )
 
 
-def format_api_error(exc: Exception) -> str:
-    error_text = str(exc)
-    if "PERMISSION_DENIED" in error_text or "denied access" in error_text.lower():
-        return (
-            "โปรเจกต์ของคุณถูกปฏิเสธการเข้าถึง Gemini API. "
-            "ตรวจสอบว่า Google Cloud project ของคุณมีสิทธิ์ใช้ Gemini, "
-            "ว่า API key ถูกต้อง และว่าบริการ Gemini ถูกเปิดใช้งานแล้ว."
-        )
-    if "UNAUTHENTICATED" in error_text or "invalid_api_key" in error_text.lower():
-        return "ไม่สามารถยืนยันตัวตนได้ โปรดตรวจสอบค่า GOOGLE_API_KEY ในไฟล์ .env และสิทธิ์ API key."
-    if "503" in error_text or "unavailable" in error_text.lower() or "rate_limit" in error_text.lower() or "rate limit" in error_text.lower():
-        return (
-            "ระบบ Gemini ช่วงนี้มีการใช้งานสูง ลองรันใหม่อีกครั้งในไม่กี่วินาที หรือใช้โมเดลสำรองด้วยตัวแปรสภาพแวดล้อม GOOGLE_FALLBACK_MODEL_NAME."
-        )
-    return "ลองเช็ค API key, สิทธิ์โปรเจกต์, และสิทธิ์ Gemini หน่อยสิ."
-
-
 def should_retry(exc: Exception) -> bool:
-    error_text = str(exc).lower()
-    return any(token in error_text for token in ["503", "unavailable", "429", "rate_limit", "rate limit", "timeout"])
+    text = str(exc).lower()
+    return any(t in text for t in ["503", "unavailable", "429", "rate_limit", "rate limit", "timeout"])
+
+
+def format_api_error(exc: Exception) -> str:
+    text = str(exc)
+    if "PERMISSION_DENIED" in text or "denied access" in text.lower():
+        return "โปรเจกต์ถูกปฏิเสธการเข้าถึง Gemini API โปรดตรวจ API key และสิทธิ์โปรเจกต์"
+    if "UNAUTHENTICATED" in text or "invalid_api_key" in text.lower():
+        return "API key ไม่ถูกต้องหรือยังไม่ได้ตั้งค่า GOOGLE_API_KEY"
+    if "429" in text or "quota" in text.lower() or "RESOURCE_EXHAUSTED" in text:
+        return "โควตา Gemini API หมดหรือเรียกถี่เกินไป โปรดลองใหม่ภายหลัง"
+    return "โปรดตรวจ API key, model name และสิทธิ์ Gemini API"
 
 
 def normalize_caption_key(key: str) -> str:
@@ -84,13 +69,12 @@ def normalize_caption_key(key: str) -> str:
 
 def parse_captions(response_text: str) -> dict[str, str]:
     response_text = response_text.strip()
+    if response_text.startswith("```"):
+        response_text = response_text.strip("`").replace("json", "", 1).strip()
     if response_text.startswith("{"):
         try:
             parsed_json = json.loads(response_text)
-            parsed = {
-                normalize_caption_key(k): str(v).strip()
-                for k, v in parsed_json.items()
-            }
+            parsed = {normalize_caption_key(k): str(v).strip() for k, v in parsed_json.items()}
             return {
                 "cute": parsed.get("cute", ""),
                 "minimal": parsed.get("minimal", ""),
@@ -99,31 +83,11 @@ def parse_captions(response_text: str) -> dict[str, str]:
         except json.JSONDecodeError:
             pass
 
-    parsed = {
-        "cute": "",
-        "minimal": "",
-        "gen-z": "",
-    }
-
+    parsed = {"cute": "", "minimal": "", "gen-z": ""}
     for line in response_text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("{") or line.startswith("}"):
-            continue
-        match = re.match(r'^(cute|minimal|gen[- ]?z)\s*[:\-]\s*(.+)$', line, re.IGNORECASE)
+        match = re.match(r"^(cute|minimal|gen[- ]?z)\s*[:\-]\s*(.+)$", line.strip(), re.I)
         if match:
-            key = normalize_caption_key(match.group(1))
-            parsed[key] = match.group(2).strip().strip('"')
-
-    if all(parsed.values()):
-        return parsed
-
-    for label in parsed:
-        pattern = label.replace("-", "[- ]?")
-        regex = re.compile(rf"{pattern}.*?[:\-]\s*(.+)", re.IGNORECASE)
-        match = regex.search(response_text)
-        if match:
-            parsed[label] = match.group(1).strip().strip('"')
-
+            parsed[normalize_caption_key(match.group(1))] = match.group(2).strip().strip('"')
     return parsed
 
 
@@ -137,13 +101,12 @@ def create_chat_response(api_key: str, model_name: str, prompt: str) -> str:
         model = genai.GenerativeModel(model_name)
         chat = model.start_chat()
         response = chat.send_message(prompt)
-
     return response.text
 
 
-def generate_captions(menu_name: str, price: str) -> dict[str, str]:
+def generate_captions(trip_name: str, budget: str) -> dict[str, str]:
     api_key = load_api_key()
-    prompt = build_prompt(menu_name, price)
+    prompt = build_prompt(trip_name, budget)
     model_names = [MODEL_NAME]
     if FALLBACK_MODEL_NAME and FALLBACK_MODEL_NAME != MODEL_NAME:
         model_names.append(FALLBACK_MODEL_NAME)
@@ -159,42 +122,29 @@ def generate_captions(menu_name: str, price: str) -> dict[str, str]:
             except Exception as exc:
                 last_exception = exc
                 if attempt < MAX_RETRIES and should_retry(exc):
-                    wait = RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
-                    time.sleep(wait)
+                    time.sleep(RETRY_DELAY_SECONDS * (2 ** (attempt - 1)))
                     continue
                 break
         if response_text:
             break
 
     if not response_text:
-        raise RuntimeError(
-            "ขอโทษนะ แต่เรียก API ไม่ได้ "
-            f"{format_api_error(last_exception or Exception('ไม่มีข้อความข้อผิดพลาด'))} "
-            f"ข้อผิดพลาดเดิม: {last_exception}"
-        )
+        raise RuntimeError(f"เรียก API ไม่ได้: {format_api_error(last_exception or Exception('unknown'))}")
 
     captions = parse_captions(response_text)
     if not all(captions.values()):
-        raise RuntimeError(
-            "ผลลัพธ์จาก API ไม่ครบตามที่คาดไว้: ต้องมี cute, minimal, gen-z.\n"
-            f"Raw response: {response_text}"
-        )
-
+        raise RuntimeError("ผลลัพธ์จาก API ไม่ครบ ต้องมี cute, minimal, gen-z\nRaw response: " + response_text)
     return captions
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="สร้าง 3 แบบคำบรรยายสำหรับโพสต์ Instagram ของคาเฟ่ MilkyMood"
-    )
-    parser.add_argument("menu_name", help="ชื่อเมนู")
-    parser.add_argument("price", help="ราคาเมนู")
+    parser = argparse.ArgumentParser(description="สร้าง 3 แคปชั่นสำหรับโปรโมตทริปท่องเที่ยว")
+    parser.add_argument("trip_name", help="ชื่อทริปหรือสถานที่ เช่น ทริปบางแสน 1 วัน")
+    parser.add_argument("budget", help="งบประมาณโดยประมาณ")
     args = parser.parse_args()
 
-    captions = generate_captions(args.menu_name, args.price)
-
+    captions = generate_captions(args.trip_name, args.budget)
     print(json.dumps(captions, indent=2, ensure_ascii=False))
-        
 
 
 if __name__ == "__main__":

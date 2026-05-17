@@ -1,4 +1,6 @@
 # agent_harness.py
+from __future__ import annotations
+
 import json
 import os
 import time
@@ -9,29 +11,40 @@ from google import genai
 
 from agent_tools import TOOLS
 
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
-
-
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-MODEL = "gemini-3.1-flash-lite"
+MODEL = os.getenv("GOOGLE_MODEL_NAME", "models/gemini-2.5-flash-lite")
 
 SYSTEM_INSTRUCTION = """
-คุณคือ Demi ผู้ช่วย AI ของร้าน MilkyMood
-หน้าที่: แปลงคำสั่งภาษาไทยเป็น JSON action
+คุณคือ Matey ผู้ช่วย AI ของ TripMate Thailand AI
+หน้าที่: แปลงคำสั่งภาษาไทยเป็น JSON action สำหรับระบบวางแผนท่องเที่ยว
 
 มี 2 action ให้เลือก:
-1. log_sale - บันทึกยอดขาย (ตัวอย่าง: "ขายลาเต้ 5 แก้ว ราคา 65 บาท")
-   ตอบ: {"action": "log_sale", "args": {"menu": "...", "quantity": N, "price": N}}
 
-2. get_sales_summary - ดูยอดขายวันนี้ (ตัวอย่าง: "วันนี้ขายได้เท่าไหร่")
-   ตอบ: {"action": "get_sales_summary", "args": {}}
+1. log_trip_interest
+ใช้เมื่อผู้ใช้ต้องการบันทึกแพลนหรือสนใจทริป เช่น
+"บันทึกทริปชลบุรี 2 คน งบ 5000 บาท ทะเล 2 วัน แบบประหยัด"
+ตอบรูปแบบ:
+{
+  "action": "log_trip_interest",
+  "args": {
+    "destination": "ชลบุรี",
+    "people": 2,
+    "budget": 5000,
+    "trip_style": "ประหยัด",
+    "trip_type": "ทะเล",
+    "days": 2,
+    "total_estimate": 5000
+  }
+}
+
+2. get_trip_summary
+ใช้เมื่อผู้ใช้ถามสรุปแพลนวันนี้ เช่น "วันนี้มีคนสนใจทริปอะไรบ้าง" หรือ "สรุปแพลนวันนี้"
+ตอบรูปแบบ:
+{"action": "get_trip_summary", "args": {}}
 
 ถ้าคำสั่งไม่ตรงกับ 2 อันนี้:
-   ตอบ: {"action": "unknown", "args": {}}
+{"action": "unknown", "args": {}}
 
 ⚠️ ตอบเป็น JSON เท่านั้น อย่าใส่ markdown code block
 """
@@ -49,11 +62,22 @@ def write_trace(event: str, data: dict) -> None:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+def clean_json(raw: str) -> dict:
+    cleaned = raw.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    return json.loads(cleaned.strip())
+
+
 def run_agent(user_input: str) -> str:
     write_trace("user_input", {"message": user_input})
 
-    # Retry logic with exponential backoff for transient API errors
     max_retries = 3
+    raw = ""
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
@@ -66,41 +90,22 @@ def run_agent(user_input: str) -> str:
         except Exception as e:
             error_str = str(e)
             write_trace("api_error", {"attempt": attempt + 1, "error": error_str})
-            
-            # Handle quota exhausted (429) - check first as it's permanent until reset
             if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "quota" in error_str.lower():
-                return "❌ ข้อจำกัด API ฟรี ถูกใช้หมด โปรดอัปเกรดเป็น Paid Plan หรือรอวันถัดไป"
-            
-            # Handle temporary unavailability (503)
+                return "❌ ข้อจำกัด API ฟรีถูกใช้หมด โปรดลองใหม่วันถัดไปหรือเปลี่ยนโมเดล"
             if "503" in error_str or "UNAVAILABLE" in error_str:
                 if attempt < max_retries - 1:
-                    # Exponential backoff: 1s, 2s, 4s
                     wait_time = 2 ** attempt
-                    print(f"⏳ บริการชั่วคราว (...รอ {wait_time} วินาที)\n")
+                    print(f"⏳ บริการชั่วคราว รอ {wait_time} วินาที")
                     time.sleep(wait_time)
                 else:
-                    return "❌ บริการ API ชั่วคราว ไม่พร้อม โปรดลองใหม่ในภายหลัง"
+                    return "❌ บริการ API ชั่วคราวไม่พร้อม โปรดลองใหม่ภายหลัง"
             else:
-                # Unknown error
-                return f"❌ เกิดข้อผิดพลาด API: {error_str[:100]}"
+                return f"❌ เกิดข้อผิดพลาด API: {error_str[:120]}"
 
     try:
-        action_data = json.loads(raw)
-    except json.JSONDecodeError:
-        # Try to strip markdown code block formatting
-        cleaned = raw.strip()
-        if cleaned.startswith("```json"):
-            cleaned = cleaned[7:]  # Remove ```json
-        elif cleaned.startswith("```"):
-            cleaned = cleaned[3:]  # Remove ```
-        if cleaned.endswith("```"):
-            cleaned = cleaned[:-3]  # Remove trailing ```
-        cleaned = cleaned.strip()
-        
-        try:
-            action_data = json.loads(cleaned)
-        except json.JSONDecodeError:
-            return "❌ AI ตอบกลับในรูปแบบที่ไม่ถูกต้อง"
+        action_data = clean_json(raw)
+    except Exception:
+        return "❌ AI ตอบกลับในรูปแบบ JSON ไม่ถูกต้อง"
 
     action = action_data.get("action")
     args = action_data.get("args", {})
@@ -111,39 +116,40 @@ def run_agent(user_input: str) -> str:
     try:
         result = TOOLS[action](**args)
         write_trace("tool_result", {"action": action, "result": result})
-        
-        # แสดงผลตามประเภท action
-        if action == "log_sale":
+
+        if action == "log_trip_interest":
             sheet_status = "✅" if result.get("sheet_uploaded") else "⚠️"
             telegram_status = "✅" if result.get("telegram_sent") else "⚠️"
             return (
-                f"✅ บันทึกสำเร็จ: {result['menu']} "
-                f"x{result['quantity']} = {result['total']} บาท\n"
+                f"✅ บันทึกแพลนสำเร็จ: {result['destination']} "
+                f"{result['people']} คน งบ {result['budget']} บาท\n"
+                f"แนวเที่ยว: {result['trip_type']} | สไตล์: {result['trip_style']} | {result['days']} วัน\n"
                 f"{sheet_status} Google Sheets | {telegram_status} Telegram"
             )
-        elif action == "get_sales_summary":
-            summary = result
-            if summary["transactions"] == 0:
-                return f"📊 วันนี้ยังไม่มียอดขาย"
-            else:
-                return (
-                    f"📊 วันนี้ {summary['date']}:\n"
-                    f"   ยอดขาย: {summary['total_revenue']} บาท\n"
-                    f"   จำนวนรายการ: {summary['total_items']} รายการ\n"
-                    f"   จำนวนรายการอาหาร: {summary['transactions']} รายการ"
-                )
-        else:
-            return f"✅ ดำเนินการสำเร็จ: {action}"
-            
+
+        if action == "get_trip_summary":
+            if result["request_count"] == 0:
+                return "📊 วันนี้ยังไม่มีแพลนที่ถูกบันทึก"
+            return (
+                f"📊 สรุปแพลนวันที่ {result['date']}\n"
+                f"จำนวนแพลน: {result['request_count']} รายการ\n"
+                f"จำนวนผู้เดินทางรวม: {result['total_people']} คน\n"
+                f"งบรวมโดยประมาณ: {result['total_budget']} บาท\n"
+                f"งบเฉลี่ย: {result['avg_budget']:.2f} บาท\n"
+                f"ปลายทางยอดนิยม: {result['top_destination']}\n"
+                f"แนวเที่ยวยอดนิยม: {result['top_type']}"
+            )
+
+        return f"✅ ดำเนินการสำเร็จ: {action}"
     except (ValueError, TypeError) as e:
         write_trace("tool_error", {"action": action, "error": str(e)})
         return f"❌ ข้อมูลไม่ถูกต้อง: {e}"
 
 
 if __name__ == "__main__":
-    print("Demi Agent พร้อมรับคำสั่ง (พิมพ์ 'exit' เพื่อออก)\n")
+    print("Matey Agent พร้อมรับคำสั่ง (พิมพ์ 'exit' เพื่อออก)\n")
     while True:
         user_input = input("คุณ: ").strip()
         if user_input.lower() == "exit":
             break
-        print(f"Demi: {run_agent(user_input)}\n")
+        print(f"Matey: {run_agent(user_input)}\n")

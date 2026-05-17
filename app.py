@@ -1,7 +1,10 @@
 # app.py
+from __future__ import annotations
+
 import os
 import random
 import re
+from dataclasses import dataclass
 from typing import Any
 
 import streamlit as st
@@ -10,7 +13,6 @@ from google import genai
 
 from rag_engine import RAGEngine
 
-# ถ้ามี agent_tools.py จาก Lab 2.5 ระบบจะพยายามบันทึก Google Sheet / Telegram จริง
 try:
     from agent_tools import TOOLS
 except Exception:
@@ -19,1145 +21,594 @@ except Exception:
 load_dotenv()
 
 st.set_page_config(
-    page_title="MilkyMood AI",
-    page_icon="🥛",
-    layout="centered",
+    page_title="TripMate Thailand AI",
+    page_icon="🧭",
+    layout="wide",
 )
 
 api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    st.error("ไม่พบ GOOGLE_API_KEY กรุณาเพิ่มใน HuggingFace Secrets หรือไฟล์ .env")
-    st.stop()
-
-client = genai.Client(api_key=api_key)
-MODEL = "gemini-3.1-flash-lite-preview"
+client = genai.Client(api_key=api_key) if api_key else None
+MODEL = os.getenv("GOOGLE_MODEL_NAME", "models/gemini-2.5-flash-lite")
 
 
 @st.cache_resource
-def load_rag():
-    return RAGEngine("knowledge/milklab_kb.txt")
+def load_rag() -> RAGEngine:
+    return RAGEngine("knowledge/tripmate_kb.txt")
 
 
 rag = load_rag()
 
 
-# =========================================================
-# เมนูร้าน MilkyMood
-# =========================================================
-
-MILK_DRINKS = {
-    "ลาเต้น้ำผึ้ง": 65,
-    "มิลค์ทีออริจินัล": 55,
-    "สตรอว์เบอร์รี่มิลค์": 60,
-    "โกโก้ภูเขาไฟ": 60,
-    "มัทฉะลาเต้": 70,
-    "คาราเมลมิลค์": 55,
-    "นมสดโอริโอ้": 65,
-    "นมสดวานิลลา": 55,
+DESTINATIONS: dict[str, dict[str, Any]] = {
+    "ชลบุรี": {
+        "type": ["ทะเล"],
+        "crowd": "เยอะ",
+        "ease": "สูง",
+        "budget": "ประหยัด-กลาง",
+        "highlights": ["บางแสน", "พัทยา", "เกาะล้าน", "เขาสามมุข"],
+        "best_for": "ทริปสั้น ใกล้กรุงเทพฯ เดินทางง่าย เหมาะกับมือใหม่",
+        "image": "images/sea_demo.png",
+    },
+    "ระยอง": {
+        "type": ["ทะเล"],
+        "crowd": "กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["เกาะเสม็ด", "หาดแม่รำพึง", "แหลมแม่พิมพ์", "สวนผลไม้"],
+        "best_for": "คนอยากพักผ่อนริมทะเล ไม่ไกลมาก และคนไม่แน่นเท่าพัทยา",
+        "image": "images/sea_demo.png",
+    },
+    "จันทบุรี": {
+        "type": ["ทะเล", "ภูเขา", "น้ำตก"],
+        "crowd": "กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["หาดเจ้าหลาว", "เนินนางพญา", "น้ำตกพลิ้ว", "ชุมชนริมน้ำ"],
+        "best_for": "คนอยากได้ทะเล ธรรมชาติ ของกิน และเมืองเก่าในทริปเดียว",
+        "image": "images/sea_demo.png",
+    },
+    "ประจวบคีรีขันธ์": {
+        "type": ["ทะเล", "ภูเขา"],
+        "crowd": "กลาง",
+        "ease": "สูง",
+        "budget": "กลาง",
+        "highlights": ["หัวหิน", "ปราณบุรี", "สามร้อยยอด", "อ่าวมะนาว"],
+        "best_for": "ครอบครัว คู่รัก และคนอยากได้ทะเลที่เดินทางสะดวก",
+        "image": "images/sea_demo.png",
+    },
+    "ภูเก็ต": {
+        "type": ["ทะเล"],
+        "crowd": "เยอะ",
+        "ease": "สูง",
+        "budget": "กลาง-สูง",
+        "highlights": ["ป่าตอง", "กะตะ", "กะรน", "แหลมพรหมเทพ", "เมืองเก่า"],
+        "best_for": "คนอยากได้ความสะดวก กิจกรรมเยอะ ร้านอาหารและโรงแรมเยอะ",
+        "image": "images/sea_demo.png",
+    },
+    "กระบี่": {
+        "type": ["ทะเล", "ภูเขา"],
+        "crowd": "กลาง-เยอะ",
+        "ease": "กลาง",
+        "budget": "กลาง-สูง",
+        "highlights": ["อ่าวนาง", "ไร่เลย์", "เกาะพีพี", "ทะเลแหวก"],
+        "best_for": "ทะเลสวย ภูเขาหินปูน กิจกรรมทางน้ำ และสายถ่ายรูป",
+        "image": "images/sea_demo.png",
+    },
+    "เชียงใหม่": {
+        "type": ["ภูเขา"],
+        "crowd": "เยอะ",
+        "ease": "สูง",
+        "budget": "กลาง",
+        "highlights": ["ดอยอินทนนท์", "ดอยสุเทพ", "ม่อนแจ่ม", "แม่กำปอง", "นิมมาน"],
+        "best_for": "มือใหม่สายภูเขา คาเฟ่เยอะ เดินทางสะดวก ที่เที่ยวหลากหลาย",
+        "image": "images/mountain_demo.png",
+    },
+    "น่าน": {
+        "type": ["ภูเขา"],
+        "crowd": "น้อย-กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["ดอยเสมอดาว", "บ่อเกลือ", "สะปัน", "วัดภูมินทร์"],
+        "best_for": "คนอยากเที่ยวช้า ๆ สงบ วิวภูเขา วัฒนธรรม และคนน้อยกว่าเชียงใหม่",
+        "image": "images/mountain_demo.png",
+    },
+    "เพชรบูรณ์": {
+        "type": ["ภูเขา"],
+        "crowd": "กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["เขาค้อ", "ภูทับเบิก", "วัดผาซ่อนแก้ว"],
+        "best_for": "วิวหมอก อากาศเย็น เหมาะกับคนมีรถส่วนตัว",
+        "image": "images/mountain_demo.png",
+    },
+    "เลย": {
+        "type": ["ภูเขา"],
+        "crowd": "กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["ภูกระดึง", "ภูเรือ", "เชียงคาน"],
+        "best_for": "สายภูเขา อากาศเย็น เดินป่า และเมืองริมโขง",
+        "image": "images/mountain_demo.png",
+    },
+    "กาญจนบุรี": {
+        "type": ["ภูเขา", "น้ำตก"],
+        "crowd": "กลาง",
+        "ease": "สูง",
+        "budget": "ประหยัด-กลาง",
+        "highlights": ["น้ำตกเอราวัณ", "สังขละบุรี", "เขื่อนศรีนครินทร์", "ทางรถไฟสายมรณะ"],
+        "best_for": "ธรรมชาติ น้ำตก ภูเขา และเดินทางจากกรุงเทพฯ ได้ไม่ยาก",
+        "image": "images/mountain_demo.png",
+    },
+    "นครนายก": {
+        "type": ["ภูเขา", "น้ำตก"],
+        "crowd": "กลาง",
+        "ease": "สูง",
+        "budget": "ประหยัด",
+        "highlights": ["เขื่อนขุนด่าน", "น้ำตกสาริกา", "วังตะไคร้"],
+        "best_for": "ทริปสั้นใกล้กรุงเทพฯ งบน้อย เหมาะกับวันเดียวหรือ 2 วัน 1 คืน",
+        "image": "images/mountain_demo.png",
+    },
 }
 
-COFFEE_DRINKS = {
-    "อเมริกาโน่เย็น": 55,
-    "ลาเต้เย็น": 65,
-    "คาปูชิโน่เย็น": 65,
-    "มอคค่าเย็น": 70,
-    "คาราเมลมัคคิอาโต": 75,
-    "เอสเพรสโซ่เย็น": 60,
-    "กาแฟส้ม": 75,
-    "อเมริกาโน่น้ำผึ้ง": 65,
-}
-
-CAKES = {
-    "เค้กสตรอว์เบอร์รี่": 75,
-    "เค้กช็อกโกแลต": 70,
-    "ชีสเค้กหน้าไหม้": 80,
-    "เค้กนมสดวานิลลา": 70,
-    "เค้กชาไทย": 75,
-    "เค้กมัทฉะ": 80,
-    "เค้กบลูเบอร์รี่": 75,
-    "บราวนี่ช็อกโกแลต": 65,
-}
-
-TOASTS = {
-    "ปังปิ้งเนยนม": 35,
-    "ปังปิ้งช็อกโกแลต": 40,
-    "ปังปิ้งสตรอว์เบอร์รี่": 45,
-    "ปังปิ้งคาราเมล": 45,
-    "ปังปิ้งโอริโอ้": 50,
-    "ปังปิ้งวิปครีม": 55,
-}
-
-BINGSU_BREAD = {
-    "ปังเย็นนมชมพู": 69,
-    "ปังเย็นโกโก้": 75,
-    "ปังเย็นชาไทย": 75,
-    "ปังเย็นโอริโอ้": 79,
-    "ปังเย็นสตรอว์เบอร์รี่": 79,
-    "ปังเย็นมัทฉะ": 85,
-}
-
-# เพิ่ม ingredients ให้ทุกเมนูเสริมดวง เพื่อให้ Demi ตอบรายละเอียดส่วนผสมได้ทันที
-LUCKY_DRINKS = {
-    "วันจันทร์": [
-        {
-            "menu": "Moon Milk",
-            "price": 69,
-            "meaning": "เสริมความใจเย็น ความรักตัวเอง และพลังอ่อนโยน",
-            "ingredients": "นมสด, วานิลลา, ไซรัปนม, วิปครีมเล็กน้อย, ไข่มุกขาว",
-        },
-        {
-            "menu": "Vanilla Calm Milk",
-            "price": 65,
-            "meaning": "เสริมความสงบ ลดความกังวล และเพิ่มความสบายใจ",
-            "ingredients": "นมสด, วานิลลา, ครีมนม, น้ำแข็ง, กลิ่นนมอ่อน ๆ",
-        },
-        {
-            "menu": "Pearl Moon Latte",
-            "price": 75,
-            "meaning": "เสริมเสน่ห์แบบนุ่มนวล และช่วยให้คนรอบข้างเอ็นดู",
-            "ingredients": "เอสเพรสโซ, นมสด, ไซรัปวานิลลา, ไข่มุก, ฟองนมนุ่ม",
-        },
-        {
-            "menu": "Honey Moon Tea",
-            "price": 70,
-            "meaning": "เสริมคำพูดหวาน ๆ การสื่อสาร และความสัมพันธ์ที่ดี",
-            "ingredients": "ชาดำ, นมสด, น้ำผึ้ง, ไซรัปนม, น้ำแข็ง",
-        },
-        {
-            "menu": "Soft Blue Milk",
-            "price": 69,
-            "meaning": "เสริมความใจเย็น ความละมุน และพลังบวกในวันใหม่",
-            "ingredients": "นมสด, ไซรัปบลูฮาวาย, วานิลลา, วิปครีม, เยลลี่ฟ้า",
-        },
-    ],
-    "วันอังคาร": [
-        {
-            "menu": "Ruby Cocoa",
-            "price": 75,
-            "meaning": "เสริมความมั่นใจ กล้าตัดสินใจ และพลังในการเริ่มต้น",
-            "ingredients": "โกโก้เข้มข้น, นมสด, ซอสสตรอว์เบอร์รี่, ผงโกโก้, น้ำแข็ง",
-        },
-        {
-            "menu": "Red Velvet Milk",
-            "price": 79,
-            "meaning": "เสริมความโดดเด่น ความกล้า และเสน่ห์ที่น่าจดจำ",
-            "ingredients": "นมสด, ซอสเรดเวลเวท, ครีมชีสโฟม, ครัมเบิลเค้ก, น้ำแข็ง",
-        },
-        {
-            "menu": "Spicy Mocha",
-            "price": 75,
-            "meaning": "เสริมพลังลุยงาน ความขยัน และความกระตือรือร้น",
-            "ingredients": "เอสเพรสโซ, โกโก้, นมสด, ซินนามอนเล็กน้อย, น้ำแข็ง",
-        },
-        {
-            "menu": "Rose Power Latte",
-            "price": 79,
-            "meaning": "เสริมพลังใจ ความรักตัวเอง และความมั่นใจจากข้างใน",
-            "ingredients": "เอสเพรสโซ, นมสด, ไซรัปกุหลาบ, ฟองนม, กลีบกุหลาบตกแต่ง",
-        },
-        {
-            "menu": "Choco Brave",
-            "price": 70,
-            "meaning": "เสริมความกล้า ความหนักแน่น และความพร้อมในการตัดสินใจ",
-            "ingredients": "โกโก้เข้มข้น, นมสด, ซอสช็อกโกแลต, ช็อกโกแลตชิพ",
-        },
-    ],
-    "วันพุธ": [
-        {
-            "menu": "Matcha Wisdom",
-            "price": 75,
-            "meaning": "เสริมสติ ความคิด การเรียน และการสื่อสาร",
-            "ingredients": "ผงมัทฉะ, นมสด, ไซรัปนม, ฟองนม, น้ำแข็ง",
-        },
-        {
-            "menu": "Mint Study Milk",
-            "price": 69,
-            "meaning": "เสริมความสดชื่น ความจำ และสมาธิในการเรียน",
-            "ingredients": "นมสด, ไซรัปมิ้นต์, เยลลี่น้ำผึ้ง, น้ำแข็ง, ฟองนม",
-        },
-        {
-            "menu": "Green Tea Focus",
-            "price": 70,
-            "meaning": "เสริมสมาธิ ความนิ่ง และการจัดการความคิด",
-            "ingredients": "ชาเขียว, นมสด, น้ำผึ้งเล็กน้อย, น้ำแข็ง",
-        },
-        {
-            "menu": "Honey Matcha Cloud",
-            "price": 79,
-            "meaning": "เสริมความนุ่มนวลในการพูด และโอกาสดี ๆ จากการสื่อสาร",
-            "ingredients": "มัทฉะ, นมสด, น้ำผึ้ง, ครีมโฟมนุ่ม, เยลลี่น้ำผึ้ง",
-        },
-        {
-            "menu": "Book Club Latte",
-            "price": 75,
-            "meaning": "เสริมการเรียน ความรู้ และแรงบันดาลใจใหม่ ๆ",
-            "ingredients": "เอสเพรสโซ, นมสด, ไซรัปวานิลลา, คาราเมลบาง ๆ, น้ำแข็ง",
-        },
-    ],
-    "วันพฤหัสบดี": [
-        {
-            "menu": "Honey Bless Latte",
-            "price": 79,
-            "meaning": "เสริมโชคด้านผู้ใหญ่ การเรียน และโอกาสดี ๆ",
-            "ingredients": "เอสเพรสโซ, นมสด, น้ำผึ้ง, ฟองนม, คาราเมลเล็กน้อย",
-        },
-        {
-            "menu": "Golden Milk Tea",
-            "price": 70,
-            "meaning": "เสริมความสำเร็จ ความเมตตา และความน่าเชื่อถือ",
-            "ingredients": "ชาไทย, นมสด, น้ำผึ้ง, ไข่มุกสีทอง, น้ำแข็ง",
-        },
-        {
-            "menu": "Teacher Choice Latte",
-            "price": 75,
-            "meaning": "เสริมดวงด้านการเรียน การสอบ และคำแนะนำจากผู้ใหญ่",
-            "ingredients": "เอสเพรสโซ, นมสด, วานิลลา, ฟองนม, ผงโกโก้โรยหน้า",
-        },
-        {
-            "menu": "Lucky Caramel Milk",
-            "price": 69,
-            "meaning": "เสริมโชคเล็ก ๆ ในชีวิตประจำวัน และความอบอุ่นใจ",
-            "ingredients": "นมสด, ซอสคาราเมล, วิปครีม, คาราเมลครัมเบิล",
-        },
-        {
-            "menu": "Wisdom Cocoa",
-            "price": 75,
-            "meaning": "เสริมปัญญา การคิดวิเคราะห์ และความมั่นคงทางใจ",
-            "ingredients": "โกโก้เข้มข้น, นมสด, น้ำผึ้ง, ผงโกโก้, น้ำแข็ง",
-        },
-    ],
-    "วันศุกร์": [
-        {
-            "menu": "Pink Lover Milk",
-            "price": 69,
-            "meaning": "เสริมเสน่ห์ ความสัมพันธ์ และความสดใสน่ารัก",
-            "ingredients": "นมสด, ไซรัปสตรอว์เบอร์รี่, ซอสนมชมพู, วิปครีม, เยลลี่หัวใจ",
-        },
-        {
-            "menu": "Strawberry Charm",
-            "price": 75,
-            "meaning": "เสริมเสน่ห์ ความน่ารัก และการเป็นที่สนใจ",
-            "ingredients": "นมสด, สตรอว์เบอร์รี่สด, ซอสสตรอว์เบอร์รี่, วิปครีม",
-        },
-        {
-            "menu": "Rose Milk Tea",
-            "price": 70,
-            "meaning": "เสริมความรัก ความอ่อนโยน และบรรยากาศดี ๆ รอบตัว",
-            "ingredients": "ชานม, ไซรัปกุหลาบ, นมสด, ฟองนม, กลิ่นดอกไม้เบา ๆ",
-        },
-        {
-            "menu": "Sweetheart Cocoa",
-            "price": 75,
-            "meaning": "เสริมความอบอุ่น ความรัก และมิตรภาพที่จริงใจ",
-            "ingredients": "โกโก้, นมสด, ซอสช็อกโกแลต, วิปครีม, มาร์ชเมลโลว์",
-        },
-        {
-            "menu": "Peachy Milk",
-            "price": 69,
-            "meaning": "เสริมความสดใส ความน่าคุย และโอกาสดีด้านความสัมพันธ์",
-            "ingredients": "นมสด, ไซรัปพีช, เยลลี่พีช, น้ำแข็ง, ฟองนม",
-        },
-    ],
-    "วันเสาร์": [
-        {
-            "menu": "Dark Choco Shield",
-            "price": 75,
-            "meaning": "เสริมความหนักแน่น ความมั่นคง และป้องกันพลังลบ",
-            "ingredients": "ดาร์กโกโก้, นมสด, ซอสช็อกโกแลตเข้ม, ช็อกโกแลตชิพ",
-        },
-        {
-            "menu": "Black Cocoa",
-            "price": 70,
-            "meaning": "เสริมความแข็งแรงทางใจ และความอดทน",
-            "ingredients": "แบล็กโกโก้, นมสด, น้ำแข็ง, ผงโกโก้โรยหน้า",
-        },
-        {
-            "menu": "Midnight Milk Tea",
-            "price": 75,
-            "meaning": "เสริมความนิ่ง ความรอบคอบ และการตัดสินใจที่ดี",
-            "ingredients": "ชาดำเข้ม, นมสด, ไข่มุก, ไซรัปบราวน์ชูการ์",
-        },
-        {
-            "menu": "Charcoal Vanilla Milk",
-            "price": 79,
-            "meaning": "เสริมการปล่อยพลังลบ และเริ่มต้นใหม่อย่างสงบ",
-            "ingredients": "นมสด, วานิลลา, ชาร์โคล, วิปครีม, คุกกี้ครัมเบิล",
-        },
-        {
-            "menu": "Strong Heart Latte",
-            "price": 75,
-            "meaning": "เสริมกำลังใจ ความมั่นคง และความกล้าที่จะไปต่อ",
-            "ingredients": "เอสเพรสโซ, นมสด, คาราเมล, ฟองนม, ผงโกโก้",
-        },
-    ],
-    "วันอาทิตย์": [
-        {
-            "menu": "Sunny Orange Coffee",
-            "price": 79,
-            "meaning": "เสริมพลัง ความสดใส โอกาสใหม่ และความมั่นใจ",
-            "ingredients": "อเมริกาโน่, น้ำส้ม, น้ำผึ้งเล็กน้อย, ส้มฝาน, น้ำแข็ง",
-        },
-        {
-            "menu": "Orange Honey Tea",
-            "price": 70,
-            "meaning": "เสริมความสดชื่น โชคดี และความสบายใจ",
-            "ingredients": "ชาดำ, น้ำส้ม, น้ำผึ้ง, ส้มฝาน, น้ำแข็ง",
-        },
-        {
-            "menu": "Sunflower Latte",
-            "price": 75,
-            "meaning": "เสริมพลังบวก ความมั่นใจ และความโดดเด่น",
-            "ingredients": "เอสเพรสโซ, นมสด, วานิลลา, คาราเมล, ฟองนม",
-        },
-        {
-            "menu": "Bright Cocoa",
-            "price": 70,
-            "meaning": "เสริมความสุขเล็ก ๆ และพลังใจที่อบอุ่น",
-            "ingredients": "โกโก้, นมสด, ซอสส้มเล็กน้อย, วิปครีม, ผงโกโก้",
-        },
-        {
-            "menu": "Golden Vanilla Milk",
-            "price": 69,
-            "meaning": "เสริมโอกาสใหม่ ความสดใส และความอ่อนโยน",
-            "ingredients": "นมสด, วานิลลา, คาราเมล, ไข่มุกสีทอง, น้ำแข็ง",
-        },
-    ],
+STYLE_NOTES = {
+    "ประหยัด": "เน้นควบคุมงบ เลือกที่พักราคาดี อาหารท้องถิ่น และสถานที่ที่ค่าเข้าไม่สูง",
+    "สมดุล": "เที่ยวครบพอดี ไม่อัดแน่นเกินไป ที่พักสะดวกและยังคุมงบได้",
+    "สบาย": "เน้นความสะดวก ที่พักดี เดินทางไม่เร่ง และมีเวลาพักผ่อน",
 }
 
 
-def flatten_lucky_menu_prices() -> dict[str, int]:
-    result = {}
-    for items in LUCKY_DRINKS.values():
-        for item in items:
-            result[item["menu"]] = item["price"]
-    return result
+@dataclass
+class TripRequest:
+    theme: str
+    province: str
+    people: int
+    days: int
+    budget: int
+    transport: str
+    crowd: str
+    style: str
+    extra: str
 
 
-LUCKY_MENU_PRICES = flatten_lucky_menu_prices()
-
-MENU_PRICES = {
-    **MILK_DRINKS,
-    **COFFEE_DRINKS,
-    **CAKES,
-    **TOASTS,
-    **BINGSU_BREAD,
-    **LUCKY_MENU_PRICES,
-}
-
-LUCKY_MENU_NAMES = set(LUCKY_MENU_PRICES.keys())
-
-TAROT_CARDS = [
-    ("The Star", "ขอให้วันนี้มีความหวังและเจอเรื่องดี ๆ เหมือนมีดาวนำทาง ✨"),
-    ("The Sun", "ขอให้วันนี้สดใส มีพลัง และเจอความสำเร็จเล็ก ๆ ที่ทำให้ยิ้มได้ ☀️"),
-    ("The Lovers", "ขอให้วันนี้มีความสัมพันธ์ที่ดี และมีคนใจดีกับเธอ 💕"),
-    ("Wheel of Fortune", "ขอให้วันนี้มีจังหวะดี ๆ และโชคหมุนมาทางเธอ 🔮"),
-    ("The Empress", "ขอให้วันนี้ได้ดูแลตัวเอง และได้รับพลังอบอุ่นจากสิ่งรอบตัว 🌷"),
-    ("Ace of Cups", "ขอให้วันนี้มีเรื่องดี ๆ เติมใจ และได้เริ่มต้นความรู้สึกใหม่ ๆ 🩷"),
-    ("The Magician", "ขอให้วันนี้มีไอเดียใหม่ ๆ และใช้ความสามารถของตัวเองได้อย่างมั่นใจ 🪄"),
-    ("Strength", "ขอให้วันนี้มีพลังใจ เข้มแข็ง และผ่านเรื่องยาก ๆ ได้อย่างนุ่มนวล 🦁"),
-    ("Temperance", "ขอให้วันนี้ทุกอย่างสมดุล ใจเย็น และค่อย ๆ ดีขึ้นทีละนิด 🕊️"),
-    ("The World", "ขอให้วันนี้ได้ปิดจบสิ่งสำคัญอย่างสวยงาม และมีความสำเร็จรออยู่ 🌍"),
-    ("Ace of Pentacles", "ขอให้วันนี้มีโอกาสดีเรื่องงาน เงิน หรือสิ่งใหม่ที่มั่นคงเข้ามา 🍀"),
-]
+def money(value: float) -> str:
+    return f"{value:,.0f} บาท"
 
 
-# =========================================================
-# CSS
-# =========================================================
+def recommend_destinations(req: TripRequest) -> list[str]:
+    candidates = []
+    for province, data in DESTINATIONS.items():
+        if req.theme != "ยังไม่แน่ใจ" and req.theme not in data["type"]:
+            continue
+        score = 0
+        if req.transport == "ไม่มีรถส่วนตัว" and data["ease"] == "สูง":
+            score += 3
+        if req.crowd == "ไม่อยากเจอคนเยอะ" and "น้อย" in data["crowd"]:
+            score += 3
+        if req.crowd == "รับได้ถ้าคนเยอะ" and data["crowd"] in ["เยอะ", "กลาง-เยอะ"]:
+            score += 1
+        if req.style == "ประหยัด" and "ประหยัด" in data["budget"]:
+            score += 3
+        if req.style == "สบาย" and data["ease"] == "สูง":
+            score += 2
+        if req.province and req.province in province:
+            score += 5
+        candidates.append((score, province))
+
+    if not candidates:
+        candidates = [(1, p) for p in DESTINATIONS]
+
+    candidates.sort(reverse=True)
+    return [p for _, p in candidates[:3]]
+
+
+def estimate_budget(req: TripRequest) -> dict[str, float]:
+    total = max(req.budget, 0)
+    if total <= 0:
+        total = req.people * req.days * 1500
+
+    transport_ratio = 0.22 if req.transport == "ไม่มีรถส่วนตัว" else 0.18
+    hotel_ratio = 0.32
+    food_ratio = 0.24
+    activity_ratio = 0.12
+    reserve_ratio = 0.10
+
+    return {
+        "เดินทาง": total * transport_ratio,
+        "ที่พัก": total * hotel_ratio,
+        "อาหาร": total * food_ratio,
+        "กิจกรรม/ค่าเข้า": total * activity_ratio,
+        "เงินสำรอง": total * reserve_ratio,
+    }
+
+
+def match_score(req: TripRequest, province: str) -> tuple[float, list[str]]:
+    data = DESTINATIONS[province]
+    score = 6.0
+    reasons = []
+
+    if req.theme in data["type"] or req.theme == "ยังไม่แน่ใจ":
+        score += 1.0
+        reasons.append("ตรงกับแนวเที่ยวที่เลือก")
+    if req.transport == "ไม่มีรถส่วนตัว" and data["ease"] == "สูง":
+        score += 1.0
+        reasons.append("เดินทางค่อนข้างสะดวกสำหรับคนไม่มีรถ")
+    if req.crowd == "ไม่อยากเจอคนเยอะ" and "น้อย" in data["crowd"]:
+        score += 1.0
+        reasons.append("เหมาะกับคนที่ไม่อยากเจอคนเยอะ")
+    if req.style == "ประหยัด" and "ประหยัด" in data["budget"]:
+        score += 1.0
+        reasons.append("ควบคุมงบได้ง่าย")
+    if req.budget >= req.people * req.days * 1500:
+        score += 0.7
+        reasons.append("งบประมาณพอวางแผนได้ค่อนข้างสบาย")
+    else:
+        reasons.append("งบค่อนข้างจำกัด ควรลดค่าที่พักหรือกิจกรรมเสียเงิน")
+
+    return min(score, 10), reasons
+
+
+def build_fallback_plan(req: TripRequest, province: str) -> str:
+    data = DESTINATIONS[province]
+    budget = estimate_budget(req)
+    score, reasons = match_score(req, province)
+    nights = max(req.days - 1, 0)
+
+    lines = [
+        f"## 🧭 แพลนแนะนำ: {province}",
+        f"**Trip Match Score:** {score:.1f}/10",
+        "",
+        "**เหตุผลที่เหมาะ:**",
+    ]
+    lines += [f"- {r}" for r in reasons]
+    lines += [
+        "",
+        f"**จุดเด่น:** {data['best_for']}",
+        f"**ไฮไลท์:** {', '.join(data['highlights'])}",
+        f"**จำนวนคน:** {req.people} คน | **จำนวนวัน:** {req.days} วัน {nights} คืน | **งบรวม:** {money(req.budget)}",
+        "",
+        "### 💰 แบ่งงบประมาณโดยประมาณ",
+    ]
+    for k, v in budget.items():
+        lines.append(f"- {k}: {money(v)}")
+
+    lines += [
+        "",
+        "### 🏨 ที่พักที่เหมาะ",
+        "- ถ้างบประหยัด: โฮสเทล เกสต์เฮาส์ หรือโรงแรมขนาดเล็กใกล้จุดเดินทางหลัก",
+        "- ถ้างบสมดุล: โรงแรม 2–3 ดาว ใกล้สถานที่เที่ยวหรือจุดขึ้นรถ",
+        "- ถ้าอยากพักสบาย: รีสอร์ตติดทะเล/วิวภูเขา หรือที่พักใกล้จุดชมวิว",
+        "",
+        "### 🚗 แผนเดินทางไป",
+        "- ออกเดินทางช่วงเช้า ประมาณ 06:00–08:00 น. เพื่อให้มีเวลาเที่ยววันแรก",
+        f"- รูปแบบเดินทาง: {req.transport}",
+        "- ถึงแล้วให้เริ่มจากจุดเที่ยวหลักที่ใกล้ที่สุดก่อน แล้วค่อยเช็กอิน",
+    ]
+
+    for day in range(1, req.days + 1):
+        if day == 1:
+            lines += [
+                "",
+                f"### Day {day}",
+                f"- เช้า: เดินทางไป {province}",
+                f"- กลางวัน: กินอาหารท้องถิ่นหรือร้านใกล้จุดแรก",
+                f"- บ่าย: เที่ยว {data['highlights'][0]}",
+                "- เย็น: เช็กอินที่พัก เดินเล่นหรือพักผ่อน",
+            ]
+        elif day == req.days:
+            lines += [
+                "",
+                f"### Day {day} / วันกลับ",
+                f"- เช้า: เที่ยวจุดเบา ๆ เช่น {data['highlights'][-1]} หรือคาเฟ่ใกล้ที่พัก",
+                "- กลางวัน: กินข้าว ซื้อของฝาก",
+                "- บ่าย: เริ่มเดินทางกลับ ไม่ควรออกช้าเกินไป",
+            ]
+        else:
+            lines += [
+                "",
+                f"### Day {day}",
+                f"- เช้า: เที่ยว {data['highlights'][1] if len(data['highlights']) > 1 else data['highlights'][0]}",
+                "- กลางวัน: พักกินข้าวใกล้สถานที่เที่ยว",
+                f"- บ่าย: เที่ยว {data['highlights'][2] if len(data['highlights']) > 2 else data['highlights'][0]}",
+                "- เย็น: กลับที่พักหรือเดินเล่นย่านใกล้เคียง",
+            ]
+
+    lines += [
+        "",
+        "### 🛟 แผนสำรองถ้าฝนตก",
+        "- เปลี่ยนจากชายหาด/จุดชมวิวกลางแจ้ง เป็นคาเฟ่ ร้านอาหารท้องถิ่น ตลาด พิพิธภัณฑ์ หรือย่านเมืองเก่า",
+        "",
+        "### ✅ สรุป",
+        f"จากงบ จำนวนคน และสไตล์แบบ{req.style} แนะนำให้เลือก {province} เพราะ{data['best_for']} แต่ควรตรวจสอบราคาที่พักและเวลาเปิด-ปิดจริงก่อนเดินทาง",
+    ]
+
+    return "\n".join(lines)
+
+
+def ask_gemini(req: TripRequest, province: str) -> str:
+    context_chunks = rag.search(
+        f"{req.theme} {province} {req.budget} บาท {req.people} คน {req.days} วัน {req.transport} {req.crowd} {req.style}",
+        top_k=5,
+    )
+    context = "\n---\n".join(context_chunks)
+    full_prompt = f"""
+คุณคือ Matey ผู้ช่วย AI ของ TripMate Thailand AI
+หน้าที่คือวางแผนเที่ยวก่อนการจองจริง โดยเน้นภูเขาและทะเลในประเทศไทย
+
+ข้อมูลจากฐานความรู้:
+{context}
+
+ข้อมูลผู้ใช้:
+- แนวเที่ยว: {req.theme}
+- จังหวัดที่สนใจ: {req.province or 'ยังไม่ระบุ'}
+- จังหวัดที่ระบบเลือก: {province}
+- จำนวนคน: {req.people}
+- จำนวนวัน: {req.days}
+- งบรวม: {req.budget} บาท
+- การเดินทาง: {req.transport}
+- ความหนาแน่นของผู้คน: {req.crowd}
+- สไตล์งบ: {req.style}
+- รายละเอียดเพิ่ม: {req.extra or '-'}
+
+ให้ตอบเป็นภาษาไทยในรูปแบบนี้:
+1. สรุปจังหวัดที่แนะนำและเหตุผล
+2. Trip Match Score /10 พร้อมเหตุผล
+3. ค่าใช้จ่ายโดยประมาณ แยก เดินทาง ที่พัก อาหาร กิจกรรม เงินสำรอง
+4. แนะนำประเภทที่พักใกล้แหล่งเที่ยว
+5. แผนเดินทางไป
+6. ตารางแพลนเที่ยวรายวันแบบ เช้า กลางวัน บ่าย เย็น
+7. แผนเดินทางกลับ
+8. แผนสำรองถ้าฝนตก
+9. สรุปว่าคุ้มไหมและควรปรับอะไรถ้างบไม่พอ
+
+ห้ามอ้างว่าราคาที่พักหรือเวลาเปิดปิดเป็นข้อมูล real-time ให้ย้ำว่าเป็นการประเมินเบื้องต้น
+"""
+    if not client:
+        return build_fallback_plan(req, province)
+    try:
+        response = client.models.generate_content(model=MODEL, contents=full_prompt)
+        return response.text
+    except Exception:
+        return build_fallback_plan(req, province)
+
+
+def log_trip_if_possible(req: TripRequest, province: str, estimate_total: int) -> str:
+    if "log_trip_interest" not in TOOLS:
+        return "โหมดตัวอย่าง: ยังไม่ได้เชื่อม tool บันทึกแพลนจริงใน app.py"
+    try:
+        result = TOOLS["log_trip_interest"](
+            destination=province,
+            people=req.people,
+            budget=req.budget,
+            trip_style=req.style,
+            trip_type=req.theme,
+            days=req.days,
+            total_estimate=estimate_total,
+        )
+        sheet = "บันทึก Google Sheet แล้ว" if result.get("sheet_uploaded") else "ยังบันทึก Google Sheet ไม่สำเร็จ"
+        telegram = "แจ้ง Telegram แล้ว" if result.get("telegram_sent") else "ยังแจ้ง Telegram ไม่สำเร็จ"
+        return f"{sheet} และ {telegram}"
+    except Exception as e:
+        return f"ยังบันทึกจริงไม่สำเร็จ: {e}"
+
+
+def render_destination_card(province: str) -> None:
+    data = DESTINATIONS[province]
+    img = data.get("image")
+    with st.container(border=True):
+        cols = st.columns([1, 2])
+        with cols[0]:
+            if img and os.path.exists(img):
+                st.image(img, use_container_width=True)
+            else:
+                st.markdown("### 🏝️🏔️")
+        with cols[1]:
+            st.markdown(f"### {province}")
+            st.write(data["best_for"])
+            st.caption(f"แนว: {', '.join(data['type'])} | คน: {data['crowd']} | ความสะดวก: {data['ease']} | งบ: {data['budget']}")
+            st.write("**ไฮไลท์:** " + ", ".join(data["highlights"]))
+
+
+def compare_destinations(a: str, b: str, req_text: str = "") -> str:
+    da, db = DESTINATIONS[a], DESTINATIONS[b]
+    return f"""
+## เปรียบเทียบ {a} vs {b}
+
+| หัวข้อ | {a} | {b} |
+|---|---|---|
+| แนวเที่ยว | {', '.join(da['type'])} | {', '.join(db['type'])} |
+| จุดเด่น | {da['best_for']} | {db['best_for']} |
+| ผู้คน | {da['crowd']} | {db['crowd']} |
+| ความสะดวก | {da['ease']} | {db['ease']} |
+| งบประมาณ | {da['budget']} | {db['budget']} |
+| ไฮไลท์ | {', '.join(da['highlights'])} | {', '.join(db['highlights'])} |
+
+### สรุป
+- ถ้าเน้นความสะดวก ให้เลือกจังหวัดที่ความสะดวกสูงกว่า
+- ถ้าไม่อยากเจอคนเยอะ ให้เลือกจังหวัดที่ผู้คนน้อยกว่า
+- ถ้างบจำกัด ให้เลือกจังหวัดที่ควบคุมค่าเดินทางและที่พักได้ง่ายกว่า
+
+จากข้อมูลที่ให้มา: {req_text or 'ยังไม่มีเงื่อนไขเพิ่มเติม'}
+"""
+
+
+def get_province_options() -> list[str]:
+    return ["ยังไม่ระบุ"] + sorted(DESTINATIONS.keys())
+
 
 st.markdown(
     """
     <style>
     .stApp {
-        background: linear-gradient(135deg, #fff7ec 0%, #ffeef7 48%, #eef7ff 100%);
+        background: linear-gradient(135deg, #eef8ff 0%, #f4fff4 50%, #fffaf0 100%);
         font-family: 'Prompt', 'Segoe UI', sans-serif;
     }
-
-    .block-container {
-        padding-top: 3rem;
-        max-width: 980px;
+    .hero {
+        background: rgba(255,255,255,.9);
+        border: 1px solid rgba(255,255,255,.9);
+        box-shadow: 0 18px 50px rgba(55, 95, 120, .13);
+        padding: 30px;
+        border-radius: 28px;
+        margin-bottom: 20px;
     }
-
-    .main-card {
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 32px;
-        padding: 34px;
-        box-shadow: 0 22px 70px rgba(150, 105, 80, 0.18);
-        border: 1px solid rgba(255, 255, 255, 0.95);
-        margin-bottom: 22px;
-    }
-
-    .title {
-        font-size: 42px;
-        font-weight: 900;
-        color: #6c4d3c;
-        margin-bottom: 10px;
-    }
-
-    .subtitle {
-        color: #8b6f60;
-        font-size: 16px;
-        line-height: 1.8;
-        margin-bottom: 18px;
-    }
-
-    .tag {
+    .hero h1 {margin: 0; font-size: 42px; color: #163b57;}
+    .hero p {font-size: 16px; color: #456; line-height: 1.8;}
+    .pill {
         display: inline-block;
-        padding: 8px 14px;
+        padding: 8px 13px;
+        margin: 4px;
         border-radius: 999px;
-        background: #fff1c7;
-        color: #7a5731;
+        background: #e8f5ff;
+        color: #1d5578;
         font-weight: 700;
-        margin: 4px 4px 4px 0;
-        font-size: 14px;
-    }
-
-    .menu-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-        margin: 14px 0 22px 0;
-    }
-
-    .menu-box {
-        background: rgba(255, 255, 255, 0.92);
-        border-radius: 24px;
-        padding: 18px;
-        border: 1px solid #ffe1ef;
-        box-shadow: 0 10px 25px rgba(255, 170, 205, 0.16);
-        min-height: 125px;
-    }
-
-    .menu-title {
-        font-size: 17px;
-        font-weight: 900;
-        color: #6c4d3c;
-        margin-bottom: 7px;
-    }
-
-    .menu-desc {
         font-size: 13px;
-        color: #8b6f60;
-        line-height: 1.55;
-    }
-
-    .lucky-card {
-        background: linear-gradient(135deg, #fff2b8, #ffe5f3);
-        border-radius: 24px;
-        padding: 20px;
-        border: 1px solid #ffeaa0;
-        color: #6c4d3c;
-        margin-bottom: 18px;
-        box-shadow: 0 12px 28px rgba(255, 190, 120, 0.16);
-    }
-
-    [data-testid="stChatMessage"] {
-        background: rgba(255, 255, 255, 0.78);
-        border-radius: 18px;
-        padding: 12px;
-        border: 1px solid rgba(255, 220, 235, 0.9);
-        box-shadow: 0 8px 20px rgba(145, 100, 80, 0.08);
-    }
-
-    .tarot-close-toggle {
-        display: none;
-    }
-
-    .tarot-close-toggle:checked + .tarot-popup {
-        display: none;
-    }
-
-    .tarot-popup {
-        position: fixed;
-        top: 54px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 999999;
-        width: min(390px, calc(100vw - 24px));
-        padding: 0;
-        background: transparent;
-        color: white;
-        text-align: center;
-        animation: tarotBounceTop 0.75s cubic-bezier(.18,.89,.32,1.28);
-        pointer-events: auto;
-    }
-
-    @keyframes tarotBounceTop {
-        0% {
-            opacity: 0;
-            transform: translate(-50%, -90px) scale(0.75);
-        }
-        65% {
-            opacity: 1;
-            transform: translate(-50%, 14px) scale(1.04);
-        }
-        100% {
-            opacity: 1;
-            transform: translate(-50%, 0) scale(1);
-        }
-    }
-
-    .tarot-close-btn {
-        position: absolute;
-        top: -12px;
-        right: 6px;
-        width: 38px;
-        height: 38px;
-        border-radius: 999px;
-        background: #fff8de;
-        color: #3a214b;
-        border: 2px solid #f7d98d;
-        box-shadow: 0 10px 24px rgba(44, 20, 70, 0.28);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 23px;
-        line-height: 1;
-        font-weight: 900;
-        cursor: pointer;
-        z-index: 3;
-    }
-
-    .flip-wrap {
-        display: flex;
-        justify-content: center;
-        margin-top: 0;
-    }
-
-    .flip-toggle {
-        display: none;
-    }
-
-    .flip-card {
-        width: 300px;
-        height: 450px;
-        perspective: 1200px;
-        cursor: pointer;
-        display: block;
-        margin: 0 auto;
-    }
-
-    .flip-inner {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        transition: transform 0.8s;
-        transform-style: preserve-3d;
-    }
-
-    .flip-toggle:checked + .flip-card .flip-inner {
-        transform: rotateY(180deg);
-    }
-
-    .flip-front,
-    .flip-back {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 30px;
-        backface-visibility: hidden;
-        box-shadow: 0 26px 60px rgba(44, 20, 70, 0.42);
-        border: 3px solid rgba(255, 230, 170, 0.98);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 28px;
-        box-sizing: border-box;
-        overflow: hidden;
-    }
-
-    .flip-front {
-        background:
-            radial-gradient(circle at center, rgba(255,255,255,0.20), transparent 36%),
-            linear-gradient(145deg, #5a3379, #241033 78%);
-        color: #ffeab6;
-        font-size: 22px;
-        font-weight: 900;
-        letter-spacing: 0.5px;
-        flex-direction: column;
-        gap: 24px;
-    }
-
-    .tarot-brand {
-        font-size: 24px;
-        line-height: 1.45;
-        font-weight: 900;
-        text-shadow: 0 4px 18px rgba(255, 235, 180, 0.28);
-    }
-
-    .tarot-open-text {
-        font-size: 22px;
-        line-height: 1.45;
-        font-weight: 900;
-    }
-
-    .tarot-front-hint {
-        font-size: 14px;
-        line-height: 1.45;
-        opacity: 0.92;
-        margin-top: 6px;
-    }
-
-    .flip-back {
-        background:
-            radial-gradient(circle at top, rgba(255, 255, 255, 0.70), transparent 36%),
-            linear-gradient(145deg, #fff8de, #ffe2f1);
-        color: #5c3d2e;
-        transform: rotateY(180deg);
-        flex-direction: column;
-        font-size: 18px;
-        line-height: 1.6;
-        font-weight: 700;
-    }
-
-    .tarot-card-name {
-        font-size: 27px;
-        margin-bottom: 18px;
-        color: #7b4b1f;
-        font-weight: 900;
-    }
-
-    .tarot-blessing {
-        font-size: 18px;
-        line-height: 1.75;
-    }
-
-    .tap-hint {
-        margin-top: 14px;
-        font-size: 14px;
-        color: #6c4d3c;
-        background: rgba(255, 248, 222, 0.92);
-        border: 1px solid #f7d98d;
-        border-radius: 999px;
-        padding: 8px 14px;
-        display: inline-block;
-        box-shadow: 0 10px 22px rgba(44, 20, 70, 0.14);
-        font-weight: 800;
-    }
-
-    .order-summary-box {
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid #ffdceb;
-        border-radius: 18px;
-        padding: 14px 16px;
-        margin: 10px 0;
-    }
-
-    @media (max-width: 800px) {
-        .menu-grid {
-            grid-template-columns: 1fr;
-        }
-        .title {
-            font-size: 31px;
-        }
-        .tarot-popup {
-            top: 58px;
-        }
-        .flip-card {
-            width: min(285px, calc(100vw - 46px));
-            height: 420px;
-        }
     }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# =========================================================
-# UI Header
-# =========================================================
-
-st.markdown(
-    """
-    <div class="main-card">
-        <div class="title">🥛 Demi ผู้ช่วย AI ของ MilkyMood</div>
-        <div class="subtitle">
-            คาเฟ่ยินดีต้อนรับคุณลูกค้า สามารถเลือกสั่งเมนูทางร้านได้ดังนี้
-            เครื่องดื่มนม กาแฟ เค้ก ขนมปังปิ้ง ปังเย็น เมนูมิกซ์เอง
-            และเมนูเสริมดวงประจำวันเกิด
-        </div>
-        <span class="tag">🥛 เครื่องดื่มนม</span>
-        <span class="tag">☕ กาแฟ</span>
-        <span class="tag">🍰 เค้ก</span>
-        <span class="tag">🍞 ขนมปังปิ้ง</span>
-        <span class="tag">🍧 ปังเย็น</span>
-        <span class="tag">🧋 มิกซ์เอง</span>
-        <span class="tag">🔮 เมนูเสริมดวง</span>
+    <div class="hero">
+        <h1>🧭 TripMate Thailand AI</h1>
+        <p>ผู้ช่วยวางแผนเที่ยวก่อนจองจริง เน้นภูเขาและทะเลในประเทศไทย วิเคราะห์จากงบ จำนวนคน จำนวนวัน ความสะดวก ผู้คน และสไตล์การเที่ยว</p>
+        <span class="pill">🏔️ ภูเขา</span>
+        <span class="pill">🏖️ ทะเล</span>
+        <span class="pill">💰 คำนวณงบ</span>
+        <span class="pill">🏨 ที่พักใกล้เคียง</span>
+        <span class="pill">🚗 แผนไป-กลับ</span>
+        <span class="pill">⚖️ เปรียบเทียบสถานที่</span>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-st.markdown(
-    """
-    <div class="menu-grid">
-        <div class="menu-box">
-            <div class="menu-title">🥛 เครื่องดื่มนม</div>
-            <div class="menu-desc">ลาเต้น้ำผึ้ง มิลค์ที โกโก้ มัทฉะ คาราเมลมิลค์ และเมนูนมสดน่ารัก ๆ</div>
-        </div>
-        <div class="menu-box">
-            <div class="menu-title">☕ กาแฟ</div>
-            <div class="menu-desc">อเมริกาโน่ ลาเต้ คาปูชิโน่ มอคค่า กาแฟส้ม และเมนูกาแฟอื่น ๆ</div>
-        </div>
-        <div class="menu-box">
-            <div class="menu-title">🔮 Lucky Birthday Drink</div>
-            <div class="menu-desc">บอกวันเกิด แล้ว Demi จะสุ่มเมนูเสริมดวง พร้อมส่วนผสม และสุ่มใหม่ได้ถ้าไม่ชอบ</div>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-st.markdown(
-    """
-    <div class="lucky-card">
-        🔮 <b>ลูกเล่นเมนูเสริมดวง</b><br>
-        บอกวันเกิด เช่น “เกิดวันศุกร์ อยากได้เมนูเสริมดวง”
-        Demi จะสุ่มเมนูจากวันนั้นให้ พร้อมบอกส่วนผสม
-        ถ้าไม่ชอบ พิมพ์ว่า “ไม่ชอบ ขอสุ่มใหม่” ได้เลยค่ะ
-        และเมื่อสั่งสำเร็จ ไพ่ยิปซีจะเด้งขึ้นด้านบนหน้าจอ
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+planner_tab, compare_tab, highlights_tab, chat_tab = st.tabs([
+    "🧭 วางแพลนเที่ยว",
+    "⚖️ เปรียบเทียบสถานที่",
+    "📍 ไฮไลท์จังหวัด",
+    "💬 ถาม AI เพิ่มเติม",
+])
 
+with planner_tab:
+    with st.form("planner_form"):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            theme = st.selectbox("อยากเที่ยวแนวไหน", ["ทะเล", "ภูเขา", "ยังไม่แน่ใจ"])
+            province_choice = st.selectbox("จังหวัดที่สนใจ", get_province_options())
+            people = st.number_input("ไปกี่คน", min_value=1, max_value=30, value=2, step=1)
+        with c2:
+            days = st.number_input("ไปกี่วัน", min_value=1, max_value=10, value=2, step=1)
+            budget = st.number_input("งบรวมทั้งหมด (บาท)", min_value=0, max_value=500000, value=5000, step=500)
+            style = st.selectbox("สไตล์งบ", ["ประหยัด", "สมดุล", "สบาย"])
+        with c3:
+            transport = st.selectbox("การเดินทาง", ["ไม่มีรถส่วนตัว", "มีรถส่วนตัว", "เครื่องบิน/รถเช่า", "ยังไม่แน่ใจ"])
+            crowd = st.selectbox("เรื่องผู้คน", ["ไม่อยากเจอคนเยอะ", "รับได้ถ้าคนเยอะ", "ยังไงก็ได้"])
+            extra = st.text_area("รายละเอียดเพิ่มเติม", placeholder="เช่น อยากมีคาเฟ่ ไม่เอาเดินเยอะ อยากได้ที่พักใกล้ทะเล")
 
-# =========================================================
-# Helper functions
-# =========================================================
+        submitted = st.form_submit_button("✨ ให้ AI วางแพลน", use_container_width=True)
 
-def find_birth_day(text: str) -> str | None:
-    day_aliases = {
-        "วันจันทร์": "วันจันทร์",
-        "จันทร์": "วันจันทร์",
-        "วันอังคาร": "วันอังคาร",
-        "อังคาร": "วันอังคาร",
-        "วันพุธ": "วันพุธ",
-        "พุธ": "วันพุธ",
-        "วันพฤหัสบดี": "วันพฤหัสบดี",
-        "วันพฤหัส": "วันพฤหัสบดี",
-        "พฤหัสบดี": "วันพฤหัสบดี",
-        "พฤหัส": "วันพฤหัสบดี",
-        "วันศุกร์": "วันศุกร์",
-        "ศุกร์": "วันศุกร์",
-        "วันเสาร์": "วันเสาร์",
-        "เสาร์": "วันเสาร์",
-        "วันอาทิตย์": "วันอาทิตย์",
-        "อาทิตย์": "วันอาทิตย์",
-    }
-
-    for key, value in day_aliases.items():
-        if key in text:
-            return value
-
-    return None
-
-
-def extract_quantity(text: str) -> int:
-    match = re.search(r"(\d+)\s*(แก้ว|ชิ้น|ที่|อัน)?", text)
-    if match:
-        return int(match.group(1))
-    return 1
-
-
-def is_order_text(text: str) -> bool:
-    order_words = ["สั่ง", "เอา", "ขอ", "ซื้อ", "รับ", "จัดมา", "เอาเมนูนี้", "เอาอันนี้", "ตัวนี้"]
-    return any(word in text for word in order_words)
-
-
-def is_list_request(text: str) -> bool:
-    list_words = ["อะไรบ้าง", "ทั้งหมด", "มีอะไร", "มีเมนูอะไร", "ลิสต์", "รายการ"]
-    return any(word in text for word in list_words)
-
-
-def is_lucky_intent(text: str) -> bool:
-    return ("เสริมดวง" in text) or ("วันเกิด" in text) or (find_birth_day(text) is not None)
-
-
-def is_reroll_text(text: str) -> bool:
-    reroll_words = [
-        "ไม่ชอบ",
-        "ไม่เอา",
-        "ไม่ถูกใจ",
-        "สุ่มใหม่",
-        "ขอใหม่",
-        "เปลี่ยนเมนู",
-        "เมนูใหม่",
-        "เอาใหม่",
-        "ไม่โดน",
-    ]
-    return any(word in text for word in reroll_words)
-
-
-def recommend_lucky_drink(day: str, avoid_menu: str | None = None) -> dict[str, Any]:
-    items = LUCKY_DRINKS[day]
-    used_map = st.session_state.setdefault("lucky_used_map", {})
-    used = set(used_map.get(day, []))
-
-    candidates = [item for item in items if item["menu"] not in used]
-    if avoid_menu:
-        candidates = [item for item in candidates if item["menu"] != avoid_menu]
-
-    if not candidates:
-        used_map[day] = []
-        candidates = [item for item in items if item["menu"] != avoid_menu] or items
-
-    item = random.choice(candidates)
-    used_map.setdefault(day, []).append(item["menu"])
-    return item
-
-
-def list_lucky_drinks(day: str) -> str:
-    items = LUCKY_DRINKS[day]
-    lines = [f"เมนูเสริมดวงสำหรับคนเกิด{day} มี 5 เมนูค่ะ 🔮"]
-    for idx, item in enumerate(items, start=1):
-        lines.append(
-            f"{idx}. {item['menu']} ราคา {item['price']} บาท\n"
-            f"   ความหมาย: {item['meaning']}\n"
-            f"   ส่วนผสม: {item['ingredients']}"
+    if submitted:
+        req = TripRequest(
+            theme=theme,
+            province="" if province_choice == "ยังไม่ระบุ" else province_choice,
+            people=int(people),
+            days=int(days),
+            budget=int(budget),
+            transport=transport,
+            crowd=crowd,
+            style=style,
+            extra=extra,
         )
-    lines.append("\nถ้าอยากให้ Demi สุ่มให้ พิมพ์ว่า “เกิด" + day.replace("วัน", "") + " อยากได้เมนูเสริมดวง” ได้เลยค่ะ")
-    return "\n".join(lines)
+        picks = recommend_destinations(req)
+        selected = req.province if req.province in DESTINATIONS else picks[0]
 
+        st.subheader("จังหวัดที่ระบบแนะนำ")
+        cols = st.columns(min(len(picks), 3))
+        for idx, p in enumerate(picks):
+            with cols[idx]:
+                render_destination_card(p)
 
-def find_lucky_item(menu_name: str) -> dict[str, Any] | None:
-    for items in LUCKY_DRINKS.values():
-        for item in items:
-            if item["menu"] == menu_name:
-                return item
-    return None
+        st.subheader("แพลนเที่ยวของคุณ")
+        answer = ask_gemini(req, selected)
+        st.markdown(answer)
 
+        status = log_trip_if_possible(req, selected, int(budget))
+        st.info(status)
 
-def format_lucky_recommendation(day: str, item: dict[str, Any], is_reroll: bool = False) -> str:
-    st.session_state["last_recommended_menu"] = item["menu"]
-    st.session_state["last_lucky_day"] = day
-    st.session_state["last_lucky_item"] = item
+        st.session_state.history.append({
+            "province": selected,
+            "theme": theme,
+            "people": int(people),
+            "days": int(days),
+            "budget": int(budget),
+            "style": style,
+        })
 
-    prefix = "Demi สุ่มเมนูใหม่ให้แล้วค่ะ 🔄" if is_reroll else f"สำหรับคนเกิด{day} Demi สุ่มเมนูเสริมดวงให้แล้วค่ะ 🔮"
+with compare_tab:
+    c1, c2 = st.columns(2)
+    with c1:
+        place_a = st.selectbox("สถานที่ A", sorted(DESTINATIONS.keys()), index=0)
+    with c2:
+        place_b = st.selectbox("สถานที่ B", sorted(DESTINATIONS.keys()), index=1)
+    req_text = st.text_input("เงื่อนไขเพิ่มเติม", placeholder="เช่น งบ 6000 ไม่มีรถส่วนตัว ไม่อยากเจอคนเยอะ")
+    if st.button("เปรียบเทียบ", use_container_width=True):
+        st.markdown(compare_destinations(place_a, place_b, req_text))
 
-    return (
-        f"{prefix}\n\n"
-        f"เมนูที่ได้: {item['menu']}\n"
-        f"ราคา: {item['price']} บาท\n"
-        f"ความหมาย: {item['meaning']}\n"
-        f"ส่วนผสม: {item['ingredients']}\n\n"
-        f"ถ้าชอบเมนูนี้ พิมพ์ว่า “สั่งเมนูนี้ 1 แก้ว” ได้เลยค่ะ\n"
-        f"ถ้ายังไม่ถูกใจ พิมพ์ว่า “ไม่ชอบ ขอสุ่มใหม่” แล้ว Demi จะสุ่มเมนูใหม่ของ{day}ให้ค่ะ"
-    )
+with highlights_tab:
+    st.subheader("จังหวัดและไฮไลท์ที่ระบบรู้จัก")
+    filter_type = st.radio("กรองตามแนวเที่ยว", ["ทั้งหมด", "ทะเล", "ภูเขา"], horizontal=True)
+    shown = []
+    for province, data in DESTINATIONS.items():
+        if filter_type != "ทั้งหมด" and filter_type not in data["type"]:
+            continue
+        shown.append(province)
+    for i in range(0, len(shown), 2):
+        cols = st.columns(2)
+        for col, province in zip(cols, shown[i:i+2]):
+            with col:
+                render_destination_card(province)
 
-
-def find_menu_from_text(text: str) -> str | None:
-    lowered = text.lower()
-
-    for menu in MENU_PRICES.keys():
-        if menu.lower() in lowered:
-            return menu
-
-    if any(word in text for word in ["เมนูนี้", "อันนี้", "ตัวนี้"]):
-        return st.session_state.get("last_recommended_menu")
-
-    return None
-
-
-def random_tarot() -> tuple[str, str]:
-    return random.choice(TAROT_CARDS)
-
-
-def estimate_wait_time(menu: str) -> str:
-    if menu in LUCKY_MENU_NAMES:
-        return "ประมาณ 10–15 นาที"
-
-    if any(word in menu for word in ["เค้ก", "ปัง", "มิกซ์"]):
-        return "ประมาณ 10–15 นาที"
-
-    return "ประมาณ 5–10 นาที"
-
-
-def save_order_if_possible(menu: str, quantity: int, price: float) -> str:
-    if "log_sale" not in TOOLS:
-        return "โหมดตัวอย่าง: ระบบสรุปออเดอร์แล้ว แต่ยังไม่ได้เชื่อม tool บันทึกจริงใน app.py"
-
-    try:
-        result = TOOLS["log_sale"](menu=menu, quantity=quantity, price=price)
-
-        sheet_status = "บันทึกลง Google Sheet แล้ว" if result.get("sheet_uploaded") else "ยังบันทึกลง Google Sheet ไม่สำเร็จ"
-        telegram_status = "แจ้งเตือนผ่าน Telegram แล้ว" if result.get("telegram_sent") else "ยังแจ้งเตือน Telegram ไม่สำเร็จ"
-
-        return f"{sheet_status} และ {telegram_status}"
-    except Exception as e:
-        return f"ยังบันทึกจริงไม่สำเร็จ: {e}"
-
-
-def tarot_popup_html(card_name: str, blessing: str) -> str:
-    card_id = f"tarot_{random.randint(10000, 99999)}"
-    close_id = f"close_{card_id}"
-    return f"""
-    <input type="checkbox" id="{close_id}" class="tarot-close-toggle">
-    <div class="tarot-popup">
-        <label for="{close_id}" class="tarot-close-btn">×</label>
-        <div class="flip-wrap">
-            <input type="checkbox" id="{card_id}" class="flip-toggle">
-            <label for="{card_id}" class="flip-card">
-                <div class="flip-inner">
-                    <div class="flip-front">
-                        <div class="tarot-brand">✦ MilkyMood<br>Tarot ✦</div>
-                        <div class="tarot-open-text">แตะเพื่อเปิดไพ่</div>
-                        <div class="tarot-front-hint">ไพ่ใบนี้มีคำอวยพรของคุณซ่อนอยู่</div>
-                    </div>
-                    <div class="flip-back">
-                        <div class="tarot-card-name">{card_name}</div>
-                        <div class="tarot-blessing">{blessing}</div>
-                    </div>
-                </div>
-            </label>
-        </div>
-        <div class="tap-hint">แตะที่ไพ่เพื่อพลิกดูคำอวยพร</div>
-    </div>
-    """
-
-
-def build_order_reply(menu: str, quantity: int, price: int, is_lucky: bool = False) -> tuple[str, str | None]:
-    total = quantity * price
-    wait_time = estimate_wait_time(menu)
-    status_message = save_order_if_possible(menu, quantity, price)
-    lucky_item = find_lucky_item(menu)
-
-    detail_lines = [
-        "### ✅ ระบบได้ทำการรับ Order เรียบร้อยแล้ว กรุณารอสักครู่ค่ะ 🥛",
-        "",
-        '<div class="order-summary-box">',
-        "<b>🧾 รายการ</b><br>",
-        f"เมนู: {menu}<br>",
-        f"จำนวน: {quantity}<br>",
-        f"ราคา: {price} บาท",
-        "</div>",
-        "",
-        '<div class="order-summary-box">',
-        "<b>💰 ยอดรวม</b><br>",
-        f"{total} บาท",
-        "</div>",
-        "",
-        '<div class="order-summary-box">',
-        "<b>⏰ เวลารอ</b><br>",
-        f"{wait_time}",
-        "</div>",
-    ]
-
-    if lucky_item:
-        detail_lines.extend(
-            [
-                "",
-                '<div class="order-summary-box">',
-                "<b>🥛 ส่วนผสม</b><br>",
-                lucky_item["ingredients"],
-                "</div>",
-                "",
-                '<div class="order-summary-box">',
-                "<b>🔮 ความหมายเมนู</b><br>",
-                lucky_item["meaning"],
-                "</div>",
-            ]
-        )
-
-    detail_lines.extend(
-        [
-            "",
-            '<div class="order-summary-box">',
-            "<b>📌 สถานะระบบ</b><br>",
-            status_message,
-            "</div>",
-        ]
-    )
-
-    tarot_html = None
-
-    if is_lucky:
-        card, blessing = random_tarot()
-        detail_lines.extend(
-            [
-                "",
-                "🔮 ระบบสุ่มไพ่ยิปซีให้แล้วค่ะ ไพ่จะเด้งขึ้นด้านบนหน้าจอ แตะที่ไพ่เพื่อดูคำอวยพร",
-            ]
-        )
-        tarot_html = tarot_popup_html(card, blessing)
-
-    reply = "\n".join(detail_lines)
-    return reply, tarot_html
-
-
-# =========================================================
-# Chat state
-# =========================================================
-
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": (
-                "สวัสดีค่าา ยินดีต้อนรับสู่ MilkyMood 🥛\n"
-                "คุณลูกค้าสามารถถามเมนู สั่งเครื่องดื่ม เค้ก ขนมปังปิ้ง ปังเย็น "
-                "หรือให้ Demi สุ่มเมนูเสริมดวงประจำวันเกิดได้เลยค่ะ"
-            ),
-        }
-    ]
-
-if "tarot_popups" not in st.session_state:
-    st.session_state.tarot_popups = {}
-
-if "search_history" not in st.session_state:
-    st.session_state.search_history = []
-
-# =========================================================
-# Sidebar: search/chat history
-# =========================================================
-
-with st.sidebar:
-    st.markdown("## 🕘 ประวัติการค้นหา")
-    st.caption("แสดงข้อความล่าสุดที่ลูกค้าพิมพ์ในแชต")
-
-    if st.button("🧹 ล้างประวัติ", use_container_width=True):
-        st.session_state.search_history = []
-        st.rerun()
-
-    if st.session_state.search_history:
-        for i, item in enumerate(reversed(st.session_state.search_history[-12:]), start=1):
-            st.markdown(f"""
-            <div style="background:rgba(255,255,255,.72);border:1px solid #ffdceb;
-            border-radius:14px;padding:10px 12px;margin:8px 0;font-size:13px;
-            color:#6c4d3c;line-height:1.45;">
-                <b>{i}.</b> {item}
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.info("ยังไม่มีประวัติการค้นหา")
-
-for idx, msg in enumerate(st.session_state.messages):
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"], unsafe_allow_html=True)
-        popup_html = st.session_state.tarot_popups.get(idx)
-        if popup_html:
-            st.markdown(popup_html, unsafe_allow_html=True)
-
-
-# =========================================================
-# Chat input
-# =========================================================
-
-if prompt := st.chat_input("ถามหรือสั่งเมนูได้เลย เช่น สั่งลาเต้น้ำผึ้ง 1 แก้ว / เกิดวันศุกร์อยากได้เมนูเสริมดวง"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    if not st.session_state.search_history or st.session_state.search_history[-1] != prompt:
-        st.session_state.search_history.append(prompt)
-        st.session_state.search_history = st.session_state.search_history[-30:]
-
-    with st.chat_message("user"):
-        st.markdown(prompt, unsafe_allow_html=True)
-
-    birth_day = find_birth_day(prompt)
-    lucky_intent = is_lucky_intent(prompt)
-    order_intent = is_order_text(prompt)
-    list_request = is_list_request(prompt)
-    reroll_intent = is_reroll_text(prompt)
-
-    tarot_html = None
-
-    if reroll_intent and st.session_state.get("last_lucky_day"):
-        day = st.session_state["last_lucky_day"]
-        avoid_menu = st.session_state.get("last_recommended_menu")
-        item = recommend_lucky_drink(day, avoid_menu=avoid_menu)
-        answer = format_lucky_recommendation(day, item, is_reroll=True)
-
-    elif lucky_intent and list_request and birth_day:
-        answer = list_lucky_drinks(birth_day)
-
-    elif lucky_intent and not order_intent:
-        if birth_day:
-            item = recommend_lucky_drink(birth_day)
-            answer = format_lucky_recommendation(birth_day, item)
-        else:
-            answer = (
-                "อยากได้เมนูเสริมดวงได้เลยค่ะ 🔮\n"
-                "รบกวนบอกวันเกิดก่อน เช่น เกิดวันศุกร์ หรือ เกิดวันจันทร์ "
-                "แล้ว Demi จะสุ่มเมนูจากวันนั้นให้ พร้อมบอกส่วนผสมค่ะ"
-            )
-
-    elif lucky_intent and order_intent:
-        if birth_day:
-            explicit_menu = find_menu_from_text(prompt)
-
-            if explicit_menu and explicit_menu in MENU_PRICES:
-                menu = explicit_menu
-                price = MENU_PRICES[menu]
-            else:
-                item = recommend_lucky_drink(birth_day)
-                menu = item["menu"]
-                price = item["price"]
-                st.session_state["last_recommended_menu"] = menu
-                st.session_state["last_lucky_day"] = birth_day
-                st.session_state["last_lucky_item"] = item
-
-            quantity = extract_quantity(prompt)
-            answer, tarot_html = build_order_reply(menu, quantity, price, is_lucky=True)
-
-        else:
-            menu = find_menu_from_text(prompt)
-
-            if menu and menu in MENU_PRICES:
-                quantity = extract_quantity(prompt)
-                price = MENU_PRICES[menu]
-                answer, tarot_html = build_order_reply(menu, quantity, price, is_lucky=(menu in LUCKY_MENU_NAMES))
-            else:
-                answer = (
-                    "ถ้าต้องการสั่งเมนูเสริมดวง รบกวนบอกวันเกิดด้วยนะคะ "
-                    "เช่น “สั่งเมนูเสริมดวงวันศุกร์ 1 แก้ว”"
-                )
-
-    elif order_intent:
-        menu = find_menu_from_text(prompt)
-
-        if menu and menu in MENU_PRICES:
-            quantity = extract_quantity(prompt)
-            price = MENU_PRICES[menu]
-            answer, tarot_html = build_order_reply(menu, quantity, price, is_lucky=(menu in LUCKY_MENU_NAMES))
-        else:
-            answer = (
-                "ขอโทษค่ะ Demi ยังไม่พบเมนูนี้ในข้อมูลร้านตอนนี้ 🥺\n"
-                "ลองพิมพ์ชื่อเมนูให้ตรงกับเมนูในร้าน เช่น ลาเต้น้ำผึ้ง, โกโก้ภูเขาไฟ, Pink Lover Milk"
-            )
-
-    else:
-        context_chunks = rag.search(prompt, top_k=3)
+with chat_tab:
+    st.subheader("ถาม AI เพิ่มเติม")
+    question = st.chat_input("เช่น มีงบ 3000 ไม่มีรถส่วนตัว อยากเที่ยวทะเลที่คนไม่เยอะ")
+    if question:
+        st.chat_message("user").markdown(question)
+        context_chunks = rag.search(question, top_k=5)
         context = "\n---\n".join(context_chunks)
+        if client:
+            prompt = f"""
+คุณคือ Matey ผู้ช่วย AI วางแผนเที่ยวของ TripMate Thailand AI
+ตอบเป็นภาษาไทย กระชับ ชัดเจน และใช้ข้อมูลจากฐานความรู้เท่านั้นถ้าเป็นข้อมูลเฉพาะ
+ถ้าเป็นราคา ให้บอกว่าเป็นการประเมินเบื้องต้น
 
-        full_prompt = f"""คุณคือ Demi ผู้ช่วย AI ของร้าน MilkyMood
-
-กติกาการตอบ:
-1. ตอบเป็นภาษาไทย น้ำเสียงน่ารัก สุภาพ เป็นกันเอง
-2. ตอบเฉพาะจากข้อมูลร้านด้านล่าง ถ้าไม่มีข้อมูลให้บอกว่า "ไม่ทราบจากข้อมูลร้านตอนนี้"
-3. ถ้าลูกค้าถามเมนู ให้สรุปเมนูและราคาให้ชัดเจน
-4. ถ้าถามเรื่องเมนูเสริมดวง ให้อธิบายว่ามี 5 เมนูต่อวัน สามารถสุ่มตามวันเกิดได้ และถ้าไม่ชอบสามารถสุ่มใหม่ได้
-5. ถ้าพูดถึงเมนูเสริมดวง ให้บอกส่วนผสมของเมนูด้วยถ้ามีในข้อมูล
-6. ห้ามแต่งเมนูหรือราคาที่ไม่มีในข้อมูลร้าน
-
-ข้อมูลร้าน:
+ข้อมูล:
 {context}
 
-คำถามลูกค้า:
-{prompt}
+คำถาม:
+{question}
 """
-        try:
-            response = client.models.generate_content(model=MODEL, contents=full_prompt)
-            answer = response.text
-        except Exception:
-            answer = "ตอนนี้เรียก Gemini API ไม่สำเร็จ จึงแสดงข้อมูลที่ค้นเจอจากฐานความรู้แทน:\n\n" + context
+            try:
+                resp = client.models.generate_content(model=MODEL, contents=prompt)
+                ai_answer = resp.text
+            except Exception:
+                ai_answer = "ตอนนี้เรียก Gemini API ไม่สำเร็จ จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n" + context
+        else:
+            ai_answer = "ยังไม่ได้ตั้งค่า GOOGLE_API_KEY จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n" + context
+        st.chat_message("assistant").markdown(ai_answer)
 
-    st.session_state.messages.append({"role": "assistant", "content": answer})
-    assistant_index = len(st.session_state.messages) - 1
-
-    if tarot_html:
-        st.session_state.tarot_popups[assistant_index] = tarot_html
-
-    with st.chat_message("assistant"):
-        st.markdown(answer, unsafe_allow_html=True)
-        if tarot_html:
-            st.markdown(tarot_html, unsafe_allow_html=True)
+with st.sidebar:
+    st.markdown("## 🕘 ประวัติแพลน")
+    if st.button("ล้างประวัติ", use_container_width=True):
+        st.session_state.history = []
+        st.rerun()
+    if not st.session_state.history:
+        st.caption("ยังไม่มีแพลนที่สร้างในรอบนี้")
+    for item in reversed(st.session_state.history[-10:]):
+        st.markdown(
+            f"""
+            <div style="background:white;border:1px solid #d9eef7;border-radius:16px;padding:12px;margin:8px 0;">
+            <b>{item['province']}</b><br>
+            {item['theme']} | {item['people']} คน | {item['days']} วัน<br>
+            งบ {item['budget']:,} บาท | {item['style']}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )

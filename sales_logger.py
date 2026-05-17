@@ -9,7 +9,6 @@ import gspread
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 
-
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -18,74 +17,94 @@ SCOPES = [
 
 def get_worksheet():
     load_dotenv()
-
     sheet_id = os.getenv("GOOGLE_SHEETS_ID")
     credentials_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "credentials.json")
 
     if not sheet_id:
         raise RuntimeError("ไม่พบ GOOGLE_SHEETS_ID ในไฟล์ .env")
-
     if not os.path.exists(credentials_file):
         raise RuntimeError(f"ไม่พบไฟล์ credentials: {credentials_file}")
 
-    credentials = Credentials.from_service_account_file(
-        credentials_file,
-        scopes=SCOPES,
-    )
-
+    credentials = Credentials.from_service_account_file(credentials_file, scopes=SCOPES)
     client = gspread.authorize(credentials)
     spreadsheet = client.open_by_key(sheet_id)
-    worksheet = spreadsheet.sheet1
-
-    return worksheet
+    return spreadsheet.sheet1
 
 
 def ensure_header(worksheet):
-    header = ["date", "menu", "quantity", "price", "total"]
+    header = [
+        "date",
+        "destination",
+        "people",
+        "budget",
+        "trip_style",
+        "trip_type",
+        "days",
+        "total_estimate",
+    ]
     first_row = worksheet.row_values(1)
-
     if first_row != header:
-        worksheet.update("A1:E1", [header])
+        worksheet.update("A1:H1", [header])
 
 
-def add_sale(menu: str, quantity: int, price: float):
+def add_trip_interest(
+    destination: str,
+    people: int,
+    budget: float,
+    trip_style: str,
+    trip_type: str = "ไม่ระบุ",
+    days: int = 1,
+    total_estimate: float | None = None,
+):
     worksheet = get_worksheet()
     ensure_header(worksheet)
 
     today = datetime.now().strftime("%Y-%m-%d")
-    total = quantity * price
+    estimate = total_estimate if total_estimate is not None else budget
 
     row = [
         today,
-        menu,
-        quantity,
-        price,
-        total,
+        destination,
+        people,
+        budget,
+        trip_style,
+        trip_type,
+        days,
+        estimate,
     ]
-
     worksheet.append_row(row, value_input_option="USER_ENTERED")
-
     return row
 
 
 def main():
-    parser = argparse.ArgumentParser(description="บันทึกยอดขายลง Google Sheet")
-    parser.add_argument("menu", help="ชื่อเมนู")
-    parser.add_argument("quantity", type=int, help="จำนวนที่ขาย")
-    parser.add_argument("price", type=float, help="ราคาต่อแก้ว")
+    parser = argparse.ArgumentParser(description="บันทึกแพลนท่องเที่ยวที่ผู้ใช้สนใจลง Google Sheet")
+    parser.add_argument("destination", help="จังหวัดหรือสถานที่ท่องเที่ยว")
+    parser.add_argument("people", type=int, help="จำนวนคน")
+    parser.add_argument("budget", type=float, help="งบประมาณรวม")
+    parser.add_argument("trip_style", help="สไตล์ เช่น ประหยัด สมดุล สบาย")
+    parser.add_argument("--trip-type", default="ไม่ระบุ", help="ภูเขา/ทะเล/ยังไม่แน่ใจ")
+    parser.add_argument("--days", type=int, default=1, help="จำนวนวัน")
 
     args = parser.parse_args()
 
     try:
-        row = add_sale(args.menu, args.quantity, args.price)
-
-        print("✓ บันทึกยอดขายสำเร็จ")
+        row = add_trip_interest(
+            destination=args.destination,
+            people=args.people,
+            budget=args.budget,
+            trip_style=args.trip_style,
+            trip_type=args.trip_type,
+            days=args.days,
+            total_estimate=args.budget,
+        )
+        print("✓ บันทึกแพลนท่องเที่ยวสำเร็จ")
         print(f"วันที่: {row[0]}")
-        print(f"เมนู: {row[1]}")
-        print(f"จำนวน: {row[2]}")
-        print(f"ราคา: {row[3]}")
-        print(f"ยอดรวม: {row[4]} บาท")
-
+        print(f"ปลายทาง: {row[1]}")
+        print(f"จำนวนคน: {row[2]}")
+        print(f"งบรวม: {row[3]} บาท")
+        print(f"สไตล์: {row[4]}")
+        print(f"แนวเที่ยว: {row[5]}")
+        print(f"จำนวนวัน: {row[6]}")
     except Exception as error:
         print(f"✗ เกิดข้อผิดพลาด: {error}")
         traceback.print_exc()

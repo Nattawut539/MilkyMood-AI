@@ -863,10 +863,9 @@ unsafe_allow_html=True,
             share_summary = st.checkbox("📤 Share Summary", value=True)
             extra = st.text_area("รายละเอียดเพิ่มเติม", placeholder="เช่น อยากมีคาเฟ่ ไม่เอาเดินเยอะ อยากได้ที่พักใกล้ทะเล")
 
-        submitted = st.button(
+        submitted = st.form_submit_button(
             "✨ ให้ AI วางแผน",
             use_container_width=True,
-            key="planner_submit",
         )
 
     if submitted:

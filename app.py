@@ -775,6 +775,37 @@ section[data-testid="stSidebar"] { background: linear-gradient(180deg, #f7fcff, 
     font-size: 13px;
     font-weight: 700;
 }
+
+.chat-empty {
+    min-height: 430px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #557080;
+}
+.chat-empty-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #e7f7ff, #eefde9);
+    border: 1px solid #cbeafa;
+    font-size: 34px;
+    margin-bottom: 12px;
+}
+.chat-empty h3 {
+    margin: 0 0 8px 0;
+    color: #163b57;
+}
+.chat-empty p {
+    margin: 0;
+    color: #6d7f88;
+}
+
 @media (max-width: 768px) {
     .hero { padding: 24px; }
     .hero::after { display: none; }
@@ -922,10 +953,34 @@ with highlights_tab:
 
 with chat_tab:
     st.subheader("ถาม AI เพิ่มเติม")
-    question = st.chat_input("เช่น มีงบ 3000 ไม่มีรถส่วนตัว อยากเที่ยวทะเลที่คนไม่เยอะ")
+
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
+
+    chat_panel = st.container(height=520, border=True)
+
+    with chat_panel:
+        if not st.session_state.chat_messages:
+            st.markdown(
+                """
+<div class="chat-empty">
+    <div class="chat-empty-icon">💬</div>
+    <h3>เริ่มคุยกับ Matey ได้เลย</h3>
+    <p>ตัวอย่าง: มีงบ 3000 ไม่มีรถส่วนตัว อยากเที่ยวทะเลที่คนไม่เยอะ</p>
+</div>
+""",
+                unsafe_allow_html=True,
+            )
+
+        for message in st.session_state.chat_messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+    question = st.chat_input("พิมพ์คำถามเกี่ยวกับทริปของคุณที่นี่...")
 
     if question:
-        st.chat_message("user").markdown(question)
+        st.session_state.chat_messages.append({"role": "user", "content": question})
+
         context_chunks = rag.search(question, top_k=5)
         context = "\n---\n".join(context_chunks)
 
@@ -949,7 +1004,12 @@ with chat_tab:
         else:
             ai_answer = "ยังไม่ได้ตั้งค่า GOOGLE_API_KEY จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n" + context
 
-        st.chat_message("assistant").markdown(ai_answer)
+        st.session_state.chat_messages.append({"role": "assistant", "content": ai_answer})
+        st.rerun()
+
+    if st.button("ล้างแชท", use_container_width=True):
+        st.session_state.chat_messages = []
+        st.rerun()
 
 with st.sidebar:
     st.markdown("## 🕘 ประวัติแพลน")

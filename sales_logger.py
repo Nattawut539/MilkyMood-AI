@@ -4,10 +4,14 @@ import argparse
 import os
 import traceback
 from datetime import datetime
+from pathlib import Path
 
 import gspread
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
+
+
+BASE_DIR = Path(__file__).resolve().parent
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -16,19 +20,35 @@ SCOPES = [
 
 
 def get_worksheet():
-    load_dotenv()
+    # โหลด .env จากโฟลเดอร์เดียวกับไฟล์นี้โดยตรง
+    load_dotenv(BASE_DIR / ".env")
+
     sheet_id = os.getenv("GOOGLE_SHEETS_ID")
     credentials_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "credentials.json")
 
+    # แปลงชื่อไฟล์ credentials ให้เป็น path ที่ชัดเจน
+    credentials_path = Path(credentials_file)
+
+    # ถ้าใน .env ใส่แค่ credentials.json ให้ไปหาในโฟลเดอร์โปรเจกต์
+    if not credentials_path.is_absolute():
+        credentials_path = BASE_DIR / credentials_path
+
     if not sheet_id:
         raise RuntimeError("ไม่พบ GOOGLE_SHEETS_ID ในไฟล์ .env")
-    if not os.path.exists(credentials_file):
-        raise RuntimeError(f"ไม่พบไฟล์ credentials: {credentials_file}")
 
-    credentials = Credentials.from_service_account_file(credentials_file, scopes=SCOPES)
+    if not credentials_path.exists():
+        raise RuntimeError(f"ไม่พบไฟล์ credentials: {credentials_path}")
+
+    credentials = Credentials.from_service_account_file(
+        str(credentials_path),
+        scopes=SCOPES,
+    )
+
     client = gspread.authorize(credentials)
     spreadsheet = client.open_by_key(sheet_id)
-    return spreadsheet.sheet1
+    worksheet = spreadsheet.sheet1
+
+    return worksheet
 
 
 def ensure_header(worksheet):
@@ -42,7 +62,9 @@ def ensure_header(worksheet):
         "days",
         "total_estimate",
     ]
+
     first_row = worksheet.row_values(1)
+
     if first_row != header:
         worksheet.update("A1:H1", [header])
 
@@ -72,12 +94,17 @@ def add_trip_interest(
         days,
         estimate,
     ]
+
     worksheet.append_row(row, value_input_option="USER_ENTERED")
+
     return row
 
 
 def main():
-    parser = argparse.ArgumentParser(description="บันทึกแพลนท่องเที่ยวที่ผู้ใช้สนใจลง Google Sheet")
+    parser = argparse.ArgumentParser(
+        description="บันทึกแพลนท่องเที่ยวที่ผู้ใช้สนใจลง Google Sheet"
+    )
+
     parser.add_argument("destination", help="จังหวัดหรือสถานที่ท่องเที่ยว")
     parser.add_argument("people", type=int, help="จำนวนคน")
     parser.add_argument("budget", type=float, help="งบประมาณรวม")
@@ -97,6 +124,7 @@ def main():
             days=args.days,
             total_estimate=args.budget,
         )
+
         print("✓ บันทึกแพลนท่องเที่ยวสำเร็จ")
         print(f"วันที่: {row[0]}")
         print(f"ปลายทาง: {row[1]}")
@@ -105,6 +133,8 @@ def main():
         print(f"สไตล์: {row[4]}")
         print(f"แนวเที่ยว: {row[5]}")
         print(f"จำนวนวัน: {row[6]}")
+        print(f"ยอดประมาณการ: {row[7]} บาท")
+
     except Exception as error:
         print(f"✗ เกิดข้อผิดพลาด: {error}")
         traceback.print_exc()

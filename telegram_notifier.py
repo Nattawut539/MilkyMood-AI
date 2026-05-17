@@ -1,63 +1,37 @@
-# telegram_notifier.py
-import html
+from __future__ import annotations
+
 import os
-from datetime import datetime
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
 
 
-def get_now_thailand() -> datetime:
-    """คืนค่าเวลาปัจจุบันตามโซนเวลาไทย ถ้าใช้ไม่ได้จะ fallback เป็นเวลาปกติ"""
-    try:
-        from zoneinfo import ZoneInfo
-
-        return datetime.now(ZoneInfo("Asia/Bangkok"))
-    except Exception:
-        return datetime.now()
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
 
-def send_sale_notification(menu: str, quantity: int, price: float, total: float) -> bool:
-    """ส่ง Telegram notification เมื่อมีการบันทึกยอดขาย"""
-    try:
-        # โหลดตัวแปรสภาพแวดล้อม ที่เวลาของการเรียกฟังก์ชัน ไม่ใช่เวลานำเข้า
-        load_dotenv()
-        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+def send_telegram_message(message: str) -> None:
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
-        if not bot_token or not chat_id:
-            print("❌ ไม่พบ TELEGRAM_BOT_TOKEN หรือ TELEGRAM_CHAT_ID")
-            return False
+    if not bot_token:
+        raise RuntimeError("ไม่พบ TELEGRAM_BOT_TOKEN ในไฟล์ .env")
 
-        timestamp = get_now_thailand().strftime("%H:%M:%S")
-        safe_menu = html.escape(str(menu))
+    if not chat_id:
+        raise RuntimeError("ไม่พบ TELEGRAM_CHAT_ID ในไฟล์ .env")
 
-        message = (
-            "🥛 <b>MilkyMood AI - ยอดขาย</b>\n\n"
-            f"📊 <b>บันทึกยอดขาย</b> [{timestamp}]\n"
-            f"🍵 เมนู: {safe_menu}\n"
-            f"📦 จำนวน: {quantity} รายการ\n"
-            f"💰 ราคา: {price} บาท/ชิ้น\n"
-            f"💵 รวม: {total} บาท\n\n"
-            "✅ บันทึกลงระบบแล้ว"
-        )
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
-        telegram_api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-
-        payload = {
+    response = requests.post(
+        url,
+        data={
             "chat_id": chat_id,
             "text": message,
             "parse_mode": "HTML",
-        }
+            "disable_web_page_preview": True,
+        },
+        timeout=15,
+    )
 
-        response = requests.post(telegram_api_url, json=payload, timeout=15)
-
-        if response.status_code == 200:
-            return True
-
-        print(f"❌ Telegram error: {response.text}")
-        return False
-
-    except Exception as e:
-        print(f"❌ ข้อผิดพลาด Telegram: {e}")
-        return False
+    response.raise_for_status()

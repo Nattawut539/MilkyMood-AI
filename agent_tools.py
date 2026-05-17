@@ -53,16 +53,20 @@ def log_trip_interest(
     if send_telegram_message:
         try:
             send_telegram_message(
-                "🧭 TripMate มีแพลนใหม่\n"
-                f"ปลายทาง: {destination}\n"
-                f"จำนวนคน: {people}\n"
-                f"งบ: {budget} บาท\n"
-                f"แนวเที่ยว: {trip_type}\n"
-                f"สไตล์: {trip_style}\n"
-                f"จำนวนวัน: {days}"
+                "🧭 <b>TripMate มีแพลนใหม่</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"📍 <b>ปลายทาง:</b> {destination}\n"
+                f"👥 <b>จำนวนคน:</b> {people} คน\n"
+                f"💰 <b>งบ:</b> {budget:,.0f} บาท\n"
+                f"🏷️ <b>แนวเที่ยว:</b> {trip_type}\n"
+                f"🎒 <b>สไตล์:</b> {trip_style}\n"
+                f"📅 <b>จำนวนวัน:</b> {days} วัน\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                "✅ บันทึกลง Google Sheet แล้ว"
             )
             telegram_sent = True
-        except Exception:
+        except Exception as e:
+            print(f"Telegram error: {e}")
             telegram_sent = False
 
     return {

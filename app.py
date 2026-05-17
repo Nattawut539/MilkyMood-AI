@@ -274,23 +274,37 @@ def money(value: float) -> str:
     return f"{value:,.0f} บาท"
 
 
+def normalize_theme_filter(theme: str) -> str:
+    """แปลงค่าตัวกรองให้ใช้ร่วมกันทั้ง dropdown และหน้าไฮไลท์"""
+    if theme in ["ทั้งหมด", "ยังไม่แน่ใจ", ""]:
+        return "ทั้งหมด"
+    return theme
+
+
+def get_destinations_by_theme(theme: str) -> list[str]:
+    """แหล่งข้อมูลกลาง: dropdown จังหวัดที่สนใจและหน้าไฮไลท์ต้องใช้ฟังก์ชันนี้เท่านั้น"""
+    normalized_theme = normalize_theme_filter(theme)
+    if normalized_theme == "ทั้งหมด":
+        return sorted(DESTINATIONS.keys())
+
+    return sorted(
+        province
+        for province, data in DESTINATIONS.items()
+        if normalized_theme in data["type"]
+    )
+
+
 def is_matching_theme(province: str, theme: str) -> bool:
-    if theme == "ยังไม่แน่ใจ":
-        return True
-    return theme in DESTINATIONS[province]["type"]
+    return province in get_destinations_by_theme(theme)
 
 
 def get_province_options(theme: str) -> list[str]:
-    provinces = [province for province in sorted(DESTINATIONS.keys()) if is_matching_theme(province, theme)]
-    return ["ยังไม่ระบุ"] + provinces
+    return ["ยังไม่ระบุ"] + get_destinations_by_theme(theme)
 
 
 def get_filtered_destinations(filter_type: str) -> list[str]:
-    return [
-        province
-        for province in sorted(DESTINATIONS.keys())
-        if filter_type == "ทั้งหมด" or filter_type in DESTINATIONS[province]["type"]
-    ]
+    # คงชื่อเดิมไว้เพื่อไม่ให้ส่วน compare/highlight พัง แต่ให้เรียกฟังก์ชันกลางตัวเดียวกัน
+    return get_destinations_by_theme(filter_type)
 
 
 def build_extra_feature_prompt(req: TripRequest) -> str:
@@ -749,6 +763,18 @@ st.markdown(
 }
 [data-testid="stTabs"] button { font-weight: 800; }
 section[data-testid="stSidebar"] { background: linear-gradient(180deg, #f7fcff, #f8fff5); }
+
+.mini-chip {
+    display: inline-block;
+    padding: 6px 10px;
+    margin: 4px 4px 4px 0;
+    border-radius: 999px;
+    background: rgba(232,245,255,.92);
+    border: 1px solid #bde4ff;
+    color: #17415e;
+    font-size: 13px;
+    font-weight: 700;
+}
 @media (max-width: 768px) {
     .hero { padding: 24px; }
     .hero::after { display: none; }
@@ -803,6 +829,12 @@ with planner_tab:
 
     theme = st.radio("อยากไปเที่ยวไหน", ["ทะเล", "ภูเขา", "ยังไม่แน่ใจ"], horizontal=True, key="theme_radio")
     province_options = get_province_options(theme)
+    available_provinces = province_options[1:]
+
+    st.caption(f"ช่องจังหวัดที่สนใจมีจังหวัดให้เลือก {len(available_provinces)} จังหวัด ซึ่งเป็นชุดเดียวกับหน้าไฮไลท์จังหวัด")
+
+    with st.expander("ดูรายชื่อจังหวัดในหมวดนี้", expanded=False):
+        st.markdown(" ".join([f"<span class='mini-chip'>{province}</span>" for province in available_provinces]), unsafe_allow_html=True)
 
     with st.form("planner_form"):
         c1, c2, c3 = st.columns(3)
@@ -878,8 +910,18 @@ with compare_tab:
 
 with highlights_tab:
     st.subheader("จังหวัดและไฮไลท์ที่ระบบรู้จัก")
-    filter_type = st.radio("กรองตามแนวเที่ยว", ["ทั้งหมด", "ทะเล", "ภูเขา"], horizontal=True, key="highlight_filter")
-    shown = get_filtered_destinations(filter_type)
+
+    # ใช้ค่าเดียวกับปุ่ม "อยากไปเที่ยวไหน" ในแท็บวางแพลน
+    # เพื่อให้ dropdown จังหวัดที่สนใจ และหน้าไฮไลท์จังหวัด แสดงจังหวัดชุดเดียวกัน
+    selected_theme_from_planner = st.session_state.get("theme_radio", "ยังไม่แน่ใจ")
+    shown = get_destinations_by_theme(selected_theme_from_planner)
+
+    if selected_theme_from_planner == "ยังไม่แน่ใจ":
+        st.info("ตอนนี้เลือก 'ยังไม่แน่ใจ' ในหน้าวางแพลน ทั้งช่องจังหวัดที่สนใจและหน้าไฮไลท์จึงแสดงจังหวัดทั้งหมด")
+    else:
+        st.info(f"ตอนนี้เลือก '{selected_theme_from_planner}' ในหน้าวางแพลน ทั้งช่องจังหวัดที่สนใจและหน้าไฮไลท์จึงแสดงเฉพาะจังหวัดสาย{selected_theme_from_planner}เหมือนกัน")
+
+    st.caption(f"พบทั้งหมด {len(shown)} จังหวัด เท่ากับจำนวนจังหวัดในช่อง ‘จังหวัดที่สนใจ’ ไม่รวมตัวเลือก ‘ยังไม่ระบุ’")
 
     for i in range(0, len(shown), 2):
         cols = st.columns(2)

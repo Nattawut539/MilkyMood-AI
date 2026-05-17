@@ -500,29 +500,330 @@ def render_ai_answer(answer: str) -> None:
 st.markdown(
     """
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap');
+
     .stApp {
-        background: linear-gradient(135deg, #eef8ff 0%, #f4fff4 50%, #fffaf0 100%);
+        background:
+            radial-gradient(circle at top left, rgba(61, 180, 242, .18), transparent 34%),
+            radial-gradient(circle at top right, rgba(49, 190, 121, .18), transparent 28%),
+            linear-gradient(135deg, #eef8ff 0%, #f4fff4 50%, #fffaf0 100%);
         font-family: 'Prompt', 'Segoe UI', sans-serif;
+        color: #123044;
     }
+
+    .block-container {
+        padding-top: 2rem;
+        max-width: 1180px;
+    }
+
     .hero {
-        background: rgba(255,255,255,.9);
+        position: relative;
+        overflow: hidden;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,255,255,.82)),
+            linear-gradient(120deg, #d9f2ff, #e7ffe7);
         border: 1px solid rgba(255,255,255,.9);
-        box-shadow: 0 18px 50px rgba(55, 95, 120, .13);
-        padding: 30px;
-        border-radius: 28px;
-        margin-bottom: 20px;
+        box-shadow: 0 24px 70px rgba(55, 95, 120, .16);
+        padding: 34px;
+        border-radius: 32px;
+        margin-bottom: 22px;
     }
-    .hero h1 {margin: 0; font-size: 42px; color: #163b57;}
-    .hero p {font-size: 16px; color: #456; line-height: 1.8;}
+
+    .hero::after {
+        content: "🏝️";
+        position: absolute;
+        right: 34px;
+        top: 22px;
+        font-size: 86px;
+        opacity: .18;
+    }
+
+    .hero h1 {
+        margin: 0 0 12px 0;
+        font-size: clamp(34px, 4vw, 52px);
+        color: #123f63;
+        font-weight: 900;
+        letter-spacing: -.5px;
+    }
+
+    .hero p {
+        max-width: 840px;
+        font-size: 17px;
+        color: #415a66;
+        line-height: 1.9;
+        margin-bottom: 18px;
+    }
+
     .pill {
         display: inline-block;
-        padding: 8px 13px;
-        margin: 4px;
+        padding: 9px 14px;
+        margin: 5px 4px 0 0;
         border-radius: 999px;
         background: #e8f5ff;
         color: #1d5578;
-        font-weight: 700;
+        font-weight: 800;
         font-size: 13px;
+        border: 1px solid #cbeafa;
+        box-shadow: 0 4px 12px rgba(39, 122, 163, .08);
+    }
+
+    /* กล่องสรุปแพลนด้านบน */
+    .plan-hero-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 22px;
+        align-items: stretch;
+        padding: 26px;
+        margin: 22px 0 18px;
+        border-radius: 30px;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.96), rgba(245,253,255,.92)),
+            linear-gradient(120deg, #e7f7ff, #ecffe9);
+        border: 1px solid rgba(195, 230, 244, .95);
+        box-shadow: 0 18px 45px rgba(34, 92, 120, .12);
+    }
+
+    .plan-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: #e8f5ff;
+        color: #1f6687;
+        font-weight: 800;
+        font-size: 13px;
+        border: 1px solid #caeafd;
+        margin-bottom: 10px;
+    }
+
+    .plan-hero-left h2 {
+        margin: 0 0 8px;
+        font-size: clamp(28px, 3.2vw, 40px);
+        color: #123f63;
+        line-height: 1.25;
+        font-weight: 900;
+    }
+
+    .plan-hero-left p {
+        font-size: 17px;
+        line-height: 1.85;
+        color: #354f5c;
+        margin: 12px 0;
+    }
+
+    .plan-hero-left ul {
+        margin: 10px 0 0 0;
+        padding-left: 22px;
+        font-size: 16px;
+        line-height: 1.9;
+        color: #244251;
+    }
+
+    .mini-tag {
+        display: inline-block;
+        padding: 6px 11px;
+        margin: 0 6px 8px 0;
+        border-radius: 999px;
+        background: #edf8ff;
+        color: #1a6388;
+        font-size: 12px;
+        font-weight: 800;
+        border: 1px solid #d3edf8;
+    }
+
+    .plan-score-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+        border-radius: 26px;
+        background: linear-gradient(160deg, #e9f8ff, #eefde8);
+        border: 1px solid rgba(200,232,244,.9);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+        text-align: center;
+    }
+
+    .score-number {
+        font-size: 54px;
+        line-height: 1;
+        font-weight: 900;
+        color: #0f5e86;
+    }
+
+    .score-label {
+        margin-top: 8px;
+        font-weight: 900;
+        color: #173e56;
+        font-size: 15px;
+    }
+
+    .score-sub {
+        margin-top: 6px;
+        color: #66808e;
+        font-size: 13px;
+    }
+
+    /* การ์ดตัวเลข */
+    .stat-card {
+        min-height: 116px;
+        padding: 20px 18px;
+        border-radius: 24px;
+        background: rgba(255,255,255,.9);
+        border: 1px solid rgba(202, 235, 247, .95);
+        box-shadow: 0 12px 30px rgba(34, 92, 120, .08);
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+
+    .stat-card span {
+        display: block;
+        margin-top: 8px;
+        color: #617783;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .stat-card b {
+        display: block;
+        margin-top: 4px;
+        color: #123f63;
+        font-size: 21px;
+        line-height: 1.35;
+        font-weight: 900;
+    }
+
+    /* งบประมาณ */
+    .budget-card {
+        padding: 24px;
+        margin: 14px 0 20px;
+        border-radius: 28px;
+        background: rgba(255,255,255,.92);
+        border: 1px solid rgba(209, 238, 246, .95);
+        box-shadow: 0 16px 42px rgba(34, 92, 120, .1);
+    }
+
+    .section-title {
+        font-size: 26px;
+        font-weight: 900;
+        color: #123f63;
+        margin-bottom: 6px;
+    }
+
+    .budget-card p {
+        color: #5f7580;
+        font-size: 15px;
+        margin-bottom: 18px;
+    }
+
+    .budget-row {
+        margin: 15px 0;
+    }
+
+    .budget-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: #18394c;
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .budget-label span {
+        color: #0f5e86;
+        font-weight: 900;
+    }
+
+    .budget-track {
+        height: 14px;
+        border-radius: 999px;
+        background: #e8f1f5;
+        overflow: hidden;
+        border: 1px solid #d7e9ef;
+    }
+
+    .budget-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #6fc7f3, #69d59b);
+    }
+
+    /* รายละเอียด AI */
+    .ai-answer-heading {
+        margin: 24px 0 10px;
+        font-size: 28px;
+        font-weight: 900;
+        color: #123f63;
+    }
+
+    .ai-answer-card {
+        padding: 26px 30px;
+        margin-bottom: 14px;
+        border-radius: 28px;
+        background: rgba(255,255,255,.95);
+        border: 1px solid rgba(202, 235, 247, .95);
+        box-shadow: 0 18px 48px rgba(34, 92, 120, .12);
+    }
+
+    .ai-answer-card h1,
+    .ai-answer-card h2,
+    .ai-answer-card h3 {
+        color: #123f63 !important;
+        font-weight: 900 !important;
+        margin-top: 20px !important;
+    }
+
+    .ai-answer-card h2 { font-size: 28px !important; }
+    .ai-answer-card h3 { font-size: 23px !important; }
+
+    .ai-answer-card p,
+    .ai-answer-card li {
+        font-size: 17px !important;
+        line-height: 1.95 !important;
+        color: #263f4b !important;
+    }
+
+    .ai-answer-card ul,
+    .ai-answer-card ol {
+        padding-left: 26px !important;
+    }
+
+    .ai-answer-card strong {
+        color: #0f5e86;
+        font-weight: 900;
+    }
+
+    /* การ์ดจังหวัดเดิมให้ดูดีขึ้น */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 24px !important;
+        box-shadow: 0 10px 24px rgba(34, 92, 120, .06);
+    }
+
+    [data-testid="stForm"] {
+        background: rgba(255,255,255,.78);
+        border: 1px solid rgba(217, 238, 247, .95);
+        border-radius: 28px;
+        padding: 18px;
+        box-shadow: 0 14px 34px rgba(34, 92, 120, .08);
+    }
+
+    [data-testid="stTabs"] button {
+        font-weight: 800;
+        font-size: 15px;
+    }
+
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f7fcff, #f8fff5);
+    }
+
+    @media (max-width: 900px) {
+        .plan-hero-card {
+            grid-template-columns: 1fr;
+        }
+        .hero::after {
+            display: none;
+        }
     }
     </style>
     <div class="hero">

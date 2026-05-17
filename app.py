@@ -94,6 +94,60 @@ DESTINATIONS: dict[str, dict[str, Any]] = {
         "best_for": "ทะเลสวย ภูเขาหินปูน กิจกรรมทางน้ำ และสายถ่ายรูป",
         "image": "images/sea_demo.png",
     },
+    "ตราด": {
+        "type": ["ทะเล"],
+        "crowd": "กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง-สูง",
+        "highlights": ["เกาะช้าง", "เกาะกูด", "เกาะหมาก", "หาดทรายขาว"],
+        "best_for": "ทะเลเกาะสวย เหมาะกับทริปพักผ่อนยาวและคนที่อยากได้บรรยากาศชิล",
+        "image": "images/sea_demo.png",
+    },
+    "ชุมพร": {
+        "type": ["ทะเล"],
+        "crowd": "น้อย-กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["หาดทรายรี", "เกาะง่าม", "จุดดำน้ำ", "จุดชมวิวเขามัทรี"],
+        "best_for": "คนอยากได้ทะเลเงียบกว่าจังหวัดยอดนิยม เหมาะกับสายดำน้ำและพักผ่อน",
+        "image": "images/sea_demo.png",
+    },
+    "สุราษฎร์ธานี": {
+        "type": ["ทะเล", "ภูเขา"],
+        "crowd": "กลาง-เยอะ",
+        "ease": "กลาง",
+        "budget": "กลาง-สูง",
+        "highlights": ["เกาะสมุย", "เกาะพะงัน", "เกาะเต่า", "เขื่อนเชี่ยวหลาน"],
+        "best_for": "คนอยากได้ทั้งทะเลสวยและธรรมชาติแบบเขื่อนภูเขาน้ำในจังหวัดเดียว",
+        "image": "images/sea_demo.png",
+    },
+    "พังงา": {
+        "type": ["ทะเล", "ภูเขา"],
+        "crowd": "กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง-สูง",
+        "highlights": ["อ่าวพังงา", "เขาตะปู", "เสม็ดนางชี", "เขาหลัก"],
+        "best_for": "วิวทะเลและภูเขาหินปูนอลังการ เหมาะกับคนชอบธรรมชาติและจุดชมวิว",
+        "image": "images/sea_demo.png",
+    },
+    "ตรัง": {
+        "type": ["ทะเล"],
+        "crowd": "น้อย-กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["เกาะมุก", "ถ้ำมรกต", "เกาะกระดาน", "หาดปากเมง"],
+        "best_for": "ทะเลใต้ที่สวยและคนน้อยกว่าภูเก็ต เหมาะกับคนอยากพักผ่อนจริง ๆ",
+        "image": "images/sea_demo.png",
+    },
+    "สตูล": {
+        "type": ["ทะเล"],
+        "crowd": "กลาง",
+        "ease": "ต่ำ-กลาง",
+        "budget": "กลาง-สูง",
+        "highlights": ["เกาะหลีเป๊ะ", "อุทยานตะรุเตา", "เกาะไข่", "หาดพัทยาหลี่เป๊ะ"],
+        "best_for": "ทะเลสวยมาก เหมาะกับทริปหลายวัน แต่ต้องเผื่อเวลาและงบเดินทางมากขึ้น",
+        "image": "images/sea_demo.png",
+    },
     "เชียงใหม่": {
         "type": ["ภูเขา"],
         "crowd": "เยอะ",
@@ -146,6 +200,51 @@ DESTINATIONS: dict[str, dict[str, Any]] = {
         "budget": "ประหยัด",
         "highlights": ["เขื่อนขุนด่าน", "น้ำตกสาริกา", "วังตะไคร้"],
         "best_for": "ทริปสั้นใกล้กรุงเทพฯ งบน้อย เหมาะกับวันเดียวหรือ 2 วัน 1 คืน",
+        "image": "images/mountain_demo.png",
+    },
+    "เชียงราย": {
+        "type": ["ภูเขา"],
+        "crowd": "กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["ภูชี้ฟ้า", "ดอยแม่สลอง", "สิงห์ปาร์ค", "วัดร่องขุ่น"],
+        "best_for": "สายภูเขา วัฒนธรรม และอากาศเย็น เหมาะกับทริปเหนือที่คนไม่แน่นเท่าเชียงใหม่",
+        "image": "images/mountain_demo.png",
+    },
+    "แม่ฮ่องสอน": {
+        "type": ["ภูเขา"],
+        "crowd": "น้อย-กลาง",
+        "ease": "ต่ำ-กลาง",
+        "budget": "กลาง",
+        "highlights": ["ปาย", "บ้านรักไทย", "ปางอุ๋ง", "สะพานซูตองเป้"],
+        "best_for": "คนอยากได้ธรรมชาติ ความสงบ วิวภูเขา และบรรยากาศพักใจ แต่ควรเผื่อเวลาเดินทาง",
+        "image": "images/mountain_demo.png",
+    },
+    "ตาก": {
+        "type": ["ภูเขา", "น้ำตก"],
+        "crowd": "น้อย-กลาง",
+        "ease": "ต่ำ-กลาง",
+        "budget": "กลาง",
+        "highlights": ["ดอยมูเซอ", "น้ำตกทีลอซู", "อุ้มผาง", "เขื่อนภูมิพล"],
+        "best_for": "สายธรรมชาติจริงจัง น้ำตกใหญ่ ภูเขา และทริปผจญภัยที่ต้องวางแผนดี",
+        "image": "images/mountain_demo.png",
+    },
+    "อุตรดิตถ์": {
+        "type": ["ภูเขา"],
+        "crowd": "น้อย",
+        "ease": "กลาง",
+        "budget": "ประหยัด-กลาง",
+        "highlights": ["ภูสอยดาว", "เขื่อนสิริกิติ์", "ลับแล", "น้ำตกแม่พูล"],
+        "best_for": "คนอยากได้ภูเขา คนไม่เยอะ และบรรยากาศเมืองรองที่ค่าใช้จ่ายไม่แรงมาก",
+        "image": "images/mountain_demo.png",
+    },
+    "พิษณุโลก": {
+        "type": ["ภูเขา", "น้ำตก"],
+        "crowd": "น้อย-กลาง",
+        "ease": "กลาง",
+        "budget": "กลาง",
+        "highlights": ["ภูหินร่องกล้า", "น้ำตกแก่งซอง", "ล่องแก่งลำน้ำเข็ก", "วัดพระศรีรัตนมหาธาตุ"],
+        "best_for": "สายภูเขา น้ำตก ประวัติศาสตร์ และกิจกรรมล่องแก่งตามฤดูกาล",
         "image": "images/mountain_demo.png",
     },
 }
@@ -588,232 +687,576 @@ def render_ai_answer(answer: str) -> None:
     with st.container(border=True):
         st.markdown(answer)
         
-
-def get_province_options(theme: str) -> list[str]:
-    if theme == "ยังไม่แน่ใจ":
-        filtered = sorted(DESTINATIONS.keys())
-    else:
-        filtered = sorted(
-            province
-            for province, data in DESTINATIONS.items()
-            if theme in data["type"]
-        )
-
-    return ["ยังไม่ระบุ"] + filtered
-
-
-def render_trip_overview(req: TripRequest, province: str) -> None:
-    data = DESTINATIONS[province]
-    score, reasons = match_score(req, province)
-    nights = max(req.days - 1, 0)
-    tags = "".join([f"<span class='mini-tag'>{tag}</span>" for tag in data["type"]])
-    reason_html = "".join([f"<li>{reason}</li>" for reason in reasons[:4]])
-    st.markdown(f"""
-<div class="plan-hero-card">
-  <div class="plan-hero-left">
-    <div class="plan-eyebrow">🧭 แพลนเที่ยวของคุณ</div>
-    <h2>แพลนแนะนำ: {province}</h2>
-    <div>{tags}</div>
-    <p>{data['best_for']}</p>
-    <ul>{reason_html}</ul>
-  </div>
-  <div class="plan-score-box">
-    <div class="score-number">{score:.1f}</div>
-    <div class="score-label">Trip Match Score / 10</div>
-    <div class="score-sub">เหมาะกับเงื่อนไขที่เลือก</div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-    m1, m2, m3, m4 = st.columns(4)
-    with m1:
-        st.markdown(f"<div class='stat-card'>👥<span>จำนวนคน</span><b>{req.people} คน</b></div>", unsafe_allow_html=True)
-    with m2:
-        st.markdown(f"<div class='stat-card'>📅<span>ระยะเวลา</span><b>{req.days} วัน {nights} คืน</b></div>", unsafe_allow_html=True)
-    with m3:
-        st.markdown(f"<div class='stat-card'>💰<span>งบรวม</span><b>{money(req.budget)}</b></div>", unsafe_allow_html=True)
-    with m4:
-        st.markdown(f"<div class='stat-card'>🎒<span>สไตล์</span><b>{req.style}</b></div>", unsafe_allow_html=True)
-
-
-def render_budget_breakdown(req: TripRequest) -> None:
-    budget = estimate_budget(req)
-    total = sum(budget.values()) or 1
-    icons = {"เดินทาง": "🚗", "ที่พัก": "🏨", "อาหาร": "🍜", "กิจกรรม/ค่าเข้า": "🎟️", "เงินสำรอง": "🛟"}
-    rows = []
-    for name, value in budget.items():
-        percent = max(3, min(100, (value / total) * 100))
-        rows.append(f"""
-<div class="budget-row">
-  <div class="budget-label">{icons.get(name, '•')} <b>{name}</b><span>{money(value)}</span></div>
-  <div class="budget-track"><div class="budget-fill" style="width:{percent:.1f}%"></div></div>
-</div>
-""")
-    st.markdown(f"""
-<div class="budget-card">
-  <div class="section-title">💰 ภาพรวมงบประมาณโดยประมาณ</div>
-  <p>ระบบแบ่งงบให้เห็นเป็นสัดส่วน เพื่อช่วยตัดสินใจก่อนจองจริง</p>
-  {''.join(rows)}
-</div>
-""", unsafe_allow_html=True)
-
-
-def render_ai_answer(answer: str) -> None:
-    st.markdown("<div class='ai-answer-heading'>📋 รายละเอียดแพลนจาก AI</div>", unsafe_allow_html=True)
-    st.markdown("<div class='ai-answer-card'>", unsafe_allow_html=True)
-    st.markdown(answer)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # st.markdown("<div class='ai-answer-card'>", unsafe_allow_html=True)
+    # st.markdown(answer)
+    # st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown(
     """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap');
-.stApp {
-    background:
-        radial-gradient(circle at top left, rgba(61, 180, 242, .18), transparent 34%),
-        radial-gradient(circle at top right, rgba(49, 190, 121, .18), transparent 28%),
-        linear-gradient(135deg, #eef8ff 0%, #f4fff4 48%, #fff9ed 100%);
-    font-family: 'Prompt', 'Segoe UI', sans-serif;
-}
-.block-container { padding-top: 2rem; max-width: 1240px; }
-.hero {
-    position: relative;
-    overflow: hidden;
-    background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(255,255,255,.78)), linear-gradient(120deg, #d9f2ff, #e7ffe7);
-    border: 1px solid rgba(255,255,255,.9);
-    box-shadow: 0 24px 70px rgba(55, 95, 120, .16);
-    padding: 34px;
-    border-radius: 32px;
-    margin-bottom: 22px;
-}
-.hero::after {
-    content: "🏝️";
-    position: absolute;
-    right: 30px;
-    top: 22px;
-    font-size: 84px;
-    opacity: .18;
-}
-.hero h1 { margin: 0; font-size: clamp(32px, 4vw, 50px); color: #133b5c; font-weight: 900; }
-.hero p { max-width: 820px; font-size: 16px; color: #456; line-height: 1.9; }
-.pill {
-    display: inline-block;
-    padding: 9px 14px;
-    margin: 5px 4px 0 0;
-    border-radius: 999px;
-    background: #e8f5ff;
-    color: #1d5578;
-    font-weight: 800;
-    font-size: 13px;
-    border: 1px solid #cbeafa;
-}
-.trip-mode-box {
-    background: rgba(255,255,255,.82);
-    border: 1px solid rgba(190, 226, 238, .9);
-    border-radius: 26px;
-    padding: 20px 22px;
-    box-shadow: 0 14px 32px rgba(34, 92, 120, .08);
-    margin-bottom: 18px;
-}
-.image-fallback {
-    height: 130px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #e7f7ff, #eefde9);
-    font-size: 58px;
-}
-.mini-tag {
-    display: inline-block;
-    padding: 5px 10px;
-    margin: 0 5px 8px 0;
-    border-radius: 999px;
-    background: #edf8ff;
-    color: #1a6388;
-    font-size: 12px;
-    font-weight: 700;
-    border: 1px solid #d3edf8;
-}
-[data-testid="stForm"] {
-    background: rgba(255,255,255,.72);
-    border: 1px solid rgba(217, 238, 247, .95);
-    border-radius: 28px;
-    padding: 18px;
-    box-shadow: 0 14px 34px rgba(34, 92, 120, .08);
-}
-[data-testid="stTabs"] button { font-weight: 800; }
-section[data-testid="stSidebar"] { background: linear-gradient(180deg, #f7fcff, #f8fff5); }
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap');
 
-.mini-chip {
-    display: inline-block;
-    padding: 6px 10px;
-    margin: 4px 4px 4px 0;
-    border-radius: 999px;
-    background: rgba(232,245,255,.92);
-    border: 1px solid #bde4ff;
-    color: #17415e;
-    font-size: 13px;
-    font-weight: 700;
-}
+    .stApp {
+        background:
+            radial-gradient(circle at top left, rgba(61, 180, 242, .18), transparent 34%),
+            radial-gradient(circle at top right, rgba(49, 190, 121, .18), transparent 28%),
+            linear-gradient(135deg, #eef8ff 0%, #f4fff4 50%, #fffaf0 100%);
+        font-family: 'Prompt', 'Segoe UI', sans-serif;
+        color: #123044;
+    }
 
-.chat-empty {
-    min-height: 430px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: #557080;
-}
-.chat-empty-icon {
-    width: 72px;
-    height: 72px;
-    border-radius: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #e7f7ff, #eefde9);
-    border: 1px solid #cbeafa;
-    font-size: 34px;
-    margin-bottom: 12px;
-}
-.chat-empty h3 {
-    margin: 0 0 8px 0;
-    color: #163b57;
-}
-.chat-empty p {
-    margin: 0;
-    color: #6d7f88;
-}
+    .block-container {
+        padding-top: 2rem;
+        max-width: 1180px;
+    }
 
-@media (max-width: 768px) {
-    .hero { padding: 24px; }
-    .hero::after { display: none; }
-}
-</style>
-""",
-    unsafe_allow_html=True,
-)
+    .hero {
+        position: relative;
+        overflow: hidden;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,255,255,.82)),
+            linear-gradient(120deg, #d9f2ff, #e7ffe7);
+        border: 1px solid rgba(255,255,255,.9);
+        box-shadow: 0 24px 70px rgba(55, 95, 120, .16);
+        padding: 34px;
+        border-radius: 32px;
 
-st.markdown(
-    """
-<div class="hero">
-    <h1>🧭 TripMate Thailand AI</h1>
-    <p>
-        ผู้ช่วยวางแผนเที่ยวก่อนจองจริง เน้นภูเขาและทะเลในประเทศไทย
-        วิเคราะห์จากงบ จำนวนคน จำนวนวัน ความสะดวก ผู้คน การเดินทาง และสไตล์การเที่ยว
-    </p>
-    <span class="pill">🏔️ ภูเขา</span>
-    <span class="pill">🏖️ ทะเล</span>
-    <span class="pill">💰 คำนวณงบ</span>
-    <span class="pill">🏨 ที่พักใกล้เคียง</span>
-    <span class="pill">🚗 แผนไป-กลับ</span>
-    <span class="pill">🌧️ Rain Backup</span>
-    <span class="pill">🚌 No Car Mode</span>
-    <span class="pill">👥 Crowd Filter</span>
-    <span class="pill">📤 Share Summary</span>
-</div>
-""",
+        /* เพิ่ม 2 บรรทัดนี้ */
+        margin-top: 50px;
+        margin-bottom: 22px;
+    }
+
+    .hero::after {
+        content: "🏝️";
+        position: absolute;
+        right: 34px;
+        top: 22px;
+        font-size: 86px;
+        opacity: .18;
+    }
+
+    .hero h1 {
+        margin: 0 0 12px 0;
+        font-size: clamp(34px, 4vw, 52px);
+        color: #123f63;
+        font-weight: 900;
+        letter-spacing: -.5px;
+    }
+
+    .hero p {
+        max-width: 840px;
+        font-size: 17px;
+        color: #415a66;
+        line-height: 1.9;
+        margin-bottom: 18px;
+    }
+
+    .pill {
+        display: inline-block;
+        padding: 9px 14px;
+        margin: 5px 4px 0 0;
+        border-radius: 999px;
+        background: #e8f5ff;
+        color: #1d5578;
+        font-weight: 800;
+        font-size: 13px;
+        border: 1px solid #cbeafa;
+        box-shadow: 0 4px 12px rgba(39, 122, 163, .08);
+    }
+
+    /* กล่องสรุปแพลนด้านบน */
+    .plan-hero-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 22px;
+        align-items: stretch;
+        padding: 26px;
+        margin: 22px 0 18px;
+        border-radius: 30px;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.96), rgba(245,253,255,.92)),
+            linear-gradient(120deg, #e7f7ff, #ecffe9);
+        border: 1px solid rgba(195, 230, 244, .95);
+        box-shadow: 0 18px 45px rgba(34, 92, 120, .12);
+    }
+
+    .plan-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: #e8f5ff;
+        color: #1f6687;
+        font-weight: 800;
+        font-size: 13px;
+        border: 1px solid #caeafd;
+        margin-bottom: 10px;
+    }
+
+    .plan-hero-left h2 {
+        margin: 0 0 8px;
+        font-size: clamp(28px, 3.2vw, 40px);
+        color: #123f63;
+        line-height: 1.25;
+        font-weight: 900;
+    }
+
+    .plan-hero-left p {
+        font-size: 17px;
+        line-height: 1.85;
+        color: #354f5c;
+        margin: 12px 0;
+    }
+
+    .plan-hero-left ul {
+        margin: 10px 0 0 0;
+        padding-left: 22px;
+        font-size: 16px;
+        line-height: 1.9;
+        color: #244251;
+    }
+
+    .mini-tag {
+        display: inline-block;
+        padding: 6px 11px;
+        margin: 0 6px 8px 0;
+        border-radius: 999px;
+        background: #edf8ff;
+        color: #1a6388;
+        font-size: 12px;
+        font-weight: 800;
+        border: 1px solid #d3edf8;
+    }
+
+    .plan-score-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+        border-radius: 26px;
+        background: linear-gradient(160deg, #e9f8ff, #eefde8);
+        border: 1px solid rgba(200,232,244,.9);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+        text-align: center;
+    }
+
+    .score-number {
+        font-size: 54px;
+        line-height: 1;
+        font-weight: 900;
+        color: #0f5e86;
+    }
+
+    .score-label {
+        margin-top: 8px;
+        font-weight: 900;
+        color: #173e56;
+        font-size: 15px;
+    }
+
+    .score-sub {
+        margin-top: 6px;
+        color: #66808e;
+        font-size: 13px;
+    }
+
+    /* การ์ดตัวเลข */
+    .stat-card {
+        min-height: 116px;
+        padding: 20px 18px;
+        border-radius: 24px;
+        background: rgba(255,255,255,.9);
+        border: 1px solid rgba(202, 235, 247, .95);
+        box-shadow: 0 12px 30px rgba(34, 92, 120, .08);
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+
+    .stat-card span {
+        display: block;
+        margin-top: 8px;
+        color: #617783;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .stat-card b {
+        display: block;
+        margin-top: 4px;
+        color: #123f63;
+        font-size: 21px;
+        line-height: 1.35;
+        font-weight: 900;
+    }
+
+    /* งบประมาณ */
+    .budget-card {
+        padding: 24px;
+        margin: 14px 0 20px;
+        border-radius: 28px;
+        background: rgba(255,255,255,.92);
+        border: 1px solid rgba(209, 238, 246, .95);
+        box-shadow: 0 16px 42px rgba(34, 92, 120, .1);
+    }
+
+    .section-title {
+        font-size: 26px;
+        font-weight: 900;
+        color: #123f63;
+        margin-bottom: 6px;
+    }
+
+    .budget-card p {
+        color: #5f7580;
+        font-size: 15px;
+        margin-bottom: 18px;
+    }
+
+    .budget-row {
+        margin: 15px 0;
+    }
+
+    .budget-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: #18394c;
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .budget-label span {
+        color: #0f5e86;
+        font-weight: 900;
+    }
+
+    .budget-track {
+        height: 14px;
+        border-radius: 999px;
+        background: #e8f1f5;
+        overflow: hidden;
+        border: 1px solid #d7e9ef;
+    }
+
+    .budget-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #6fc7f3, #69d59b);
+    }
+
+    /* รายละเอียด AI */
+    .ai-answer-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin: 28px 0 14px;
+        padding: 18px 22px;
+        border-radius: 24px;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.95), rgba(245,253,255,.92)),
+            linear-gradient(120deg, #e7f7ff, #ecffe9);
+        border: 1px solid rgba(202, 235, 247, .95);
+        box-shadow: 0 12px 30px rgba(34, 92, 120, .08);
+    }
+
+    .ai-answer-icon {
+        width: 54px;
+        height: 54px;
+        min-width: 54px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #e7f7ff, #eefde9);
+        border: 1px solid #cbeafa;
+        font-size: 28px;
+    }
+
+    .ai-answer-title h2 {
+        margin: 0;
+        color: #123f63;
+        font-size: 28px;
+        font-weight: 900;
+        line-height: 1.25;
+    }
+
+    .ai-answer-title p {
+        margin: 6px 0 0;
+        color: #617783;
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    /* กล่องข้อความคำตอบ AI */
+    .ai-answer-content {
+        padding: 26px 30px;
+        margin-bottom: 14px;
+        border-radius: 28px;
+        background: rgba(255,255,255,.95);
+        border: 1px solid rgba(202, 235, 247, .95);
+        box-shadow: 0 18px 48px rgba(34, 92, 120, .12);
+    }
+
+    .ai-answer-content h1,
+    .ai-answer-content h2,
+    .ai-answer-content h3 {
+        color: #123f63 !important;
+        font-weight: 900 !important;
+        margin-top: 20px !important;
+    }
+
+    .ai-answer-content h2 {
+        font-size: 28px !important;
+    }
+
+    .ai-answer-content h3 {
+        font-size: 23px !important;
+    }
+
+    .ai-answer-content p,
+    .ai-answer-content li {
+        font-size: 17px !important;
+        line-height: 1.95 !important;
+        color: #263f4b !important;
+    }
+
+    .ai-answer-content ul,
+    .ai-answer-content ol {
+        padding-left: 26px !important;
+    }
+
+    .ai-answer-content strong {
+        color: #0f5e86;
+        font-weight: 900;
+    }
+    
+    /* การ์ดจังหวัดเดิมให้ดูดีขึ้น */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 24px !important;
+        box-shadow: 0 10px 24px rgba(34, 92, 120, .06);
+    }
+
+    [data-testid="stForm"] {
+        background: rgba(255,255,255,.78);
+        border: 1px solid rgba(217, 238, 247, .95);
+        border-radius: 28px;
+        padding: 18px;
+        box-shadow: 0 14px 34px rgba(34, 92, 120, .08);
+    }
+
+    [data-testid="stTabs"] button {
+        font-weight: 800;
+        font-size: 15px;
+    }
+
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f7fcff, #f8fff5);
+    }
+        /* กล่องว่างตอนยังไม่มีแชท */
+    .chat-empty {
+        height: 500px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #557080;
+        padding: 24px;
+        box-sizing: border-box;
+    }
+
+    .chat-empty-icon {
+        width: 82px;
+        height: 82px;
+        border-radius: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #e7f7ff, #eefde9);
+        border: 1px solid #cbeafa;
+        font-size: 38px;
+        margin-bottom: 18px;
+        box-shadow: 0 12px 28px rgba(34, 92, 120, 0.10);
+    }
+
+    .chat-empty h3 {
+        margin: 0 0 10px 0;
+        color: #163b57;
+        font-size: 28px;
+        font-weight: 800;
+    }
+
+    .chat-empty p {
+        margin: 0;
+        color: #6d7f88;
+        font-size: 16px;
+        line-height: 1.7;
+    }
+    
+        /* ตารางเปรียบเทียบสถานที่ */
+    .compare-result-card {
+        margin-top: 28px;
+        padding: 28px;
+        border-radius: 30px;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.96), rgba(247,253,255,.92)),
+            linear-gradient(120deg, #e7f7ff, #ecffe9);
+        border: 1px solid rgba(202, 235, 247, .95);
+        box-shadow: 0 18px 48px rgba(34, 92, 120, .12);
+    }
+
+    .compare-title {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr);
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 22px;
+        width: 100%;
+    }
+
+    .compare-title-icon {
+        width: 54px;
+        height: 54px;
+        min-width: 54px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #e7f7ff, #eefde9);
+        border: 1px solid #cbeafa;
+        font-size: 28px;
+        box-shadow: 0 10px 24px rgba(34, 92, 120, .08);
+    }
+
+    .compare-title-text {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .compare-title-text h2 {
+        margin: 0;
+        color: #123f63;
+        font-size: 32px;
+        font-weight: 900;
+        line-height: 1.25;
+        white-space: normal;
+        word-break: keep-all;
+        overflow-wrap: normal;
+    }
+
+    .compare-title-text p {
+        margin: 6px 0 0;
+        color: #617783;
+        font-size: 15px;
+        line-height: 1.7;
+    }
+    .compare-table-wrap {
+        overflow-x: auto;
+        border-radius: 22px;
+        border: 1px solid #d6edf5;
+        background: white;
+    }
+
+    .compare-table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        font-size: 16px;
+    }
+
+    .compare-table thead th {
+        background: linear-gradient(135deg, #e8f5ff, #effdec);
+        color: #123f63;
+        font-weight: 900;
+        font-size: 17px;
+        padding: 16px 18px;
+        text-align: left;
+        border-bottom: 1px solid #d6edf5;
+    }
+
+    .compare-table tbody td {
+        padding: 15px 18px;
+        vertical-align: top;
+        color: #263f4b;
+        line-height: 1.8;
+        border-bottom: 1px solid #e5f0f4;
+    }
+
+    .compare-table tbody tr:nth-child(even) {
+        background: rgba(240, 250, 255, .62);
+    }
+
+    .compare-table tbody tr:hover {
+        background: rgba(224, 246, 255, .85);
+    }
+
+    .compare-table tbody td:first-child {
+        width: 180px;
+        font-weight: 900;
+        color: #0f5e86;
+        background: rgba(232, 245, 255, .55);
+    }
+
+    .compare-summary-box {
+        margin-top: 22px;
+        padding: 22px 24px;
+        border-radius: 24px;
+        background: rgba(255,255,255,.88);
+        border: 1px solid rgba(202, 235, 247, .95);
+        box-shadow: 0 10px 24px rgba(34, 92, 120, .06);
+    }
+
+    .compare-summary-box h3 {
+        margin: 0 0 12px;
+        color: #123f63;
+        font-size: 24px;
+        font-weight: 900;
+    }
+
+    .compare-summary-box ul {
+        margin: 0;
+        padding-left: 22px;
+    }
+
+    .compare-summary-box li {
+        font-size: 16px;
+        line-height: 1.9;
+        color: #263f4b;
+    }
+
+    .compare-user-note {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: #f2f8fb;
+        color: #34515f;
+        font-size: 15px;
+        border: 1px solid #d9eef7;
+    }
+
+    @media (max-width: 900px) {
+        .plan-hero-card {
+            grid-template-columns: 1fr;
+        }
+        .hero::after {
+            display: none;
+        }
+    }
+    </style>
+    <div class="hero">
+        <h1>🧭 TripMate Thailand AI</h1>
+        <p>ผู้ช่วยวางแผนเที่ยวก่อนจองจริง เน้นภูเขาและทะเลในประเทศไทย วิเคราะห์จากงบ จำนวนคน จำนวนวัน ความสะดวก ผู้คน และสไตล์การเที่ยว</p>
+        <span class="pill">🏔️ ภูเขา</span>
+        <span class="pill">🏖️ ทะเล</span>
+        <span class="pill">💰 คำนวณงบ</span>
+        <span class="pill">🏨 ที่พักใกล้เคียง</span>
+        <span class="pill">🚗 แผนไป-กลับ</span>
+        <span class="pill">⚖️ เปรียบเทียบสถานที่</span>
+    </div>
+    """,
     unsafe_allow_html=True,
 )
 
@@ -828,44 +1271,81 @@ planner_tab, compare_tab, highlights_tab, chat_tab = st.tabs([
 ])
 
 with planner_tab:
-    st.markdown(
-        """
-<div class="trip-mode-box">
-    <h3 style="margin-top:0;color:#163b57;">อยากไปเที่ยวไหน?</h3>
-    <p style="margin-bottom:0;color:#52636c;">
-        เลือกก่อนว่าอยากไป <b>ทะเล</b> หรือ <b>ภูเขา</b>
-        แล้วช่องจังหวัดจะแสดงเฉพาะจังหวัดที่ตรงกับแนวที่เลือกเท่านั้น
-    </p>
-</div>
-""",
-unsafe_allow_html=True,
-    )
+    planner_box = st.container(border=True)
 
-    theme = st.radio("อยากไปเที่ยวไหน", ["ทะเล", "ภูเขา", "ยังไม่แน่ใจ"], horizontal=True, key="theme_radio")
-    province_options = get_province_options(theme)
-    available_provinces = province_options[1:]
-
-    with st.form("planner_form"):
+    with planner_box:
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            province_choice = st.selectbox("จังหวัดที่สนใจ", province_options)
-            people = st.number_input("ไปกี่คน", min_value=1, max_value=30, value=2, step=1)
-            days = st.number_input("ไปกี่วัน", min_value=1, max_value=10, value=2, step=1)
-        with c2:
-            budget = st.number_input("งบรวมทั้งหมด (บาท)", min_value=0, max_value=5000000, value=5000, step=500)
-            style = st.selectbox("สไตล์งบ", ["ประหยัด", "สมดุล", "สบาย"])
-            transport = st.selectbox("การเดินทาง", ["ไม่มีรถส่วนตัว", "มีรถส่วนตัว", "เครื่องบิน/รถเช่า", "ยังไม่แน่ใจ"])
-        with c3:
-            crowd = st.selectbox("Crowd Filter / เรื่องผู้คน", ["ไม่อยากเจอคนเยอะ", "รับได้ถ้าคนเยอะ", "ยังไงก็ได้"])
-            rain_backup = st.checkbox("🌧️ Rain Backup Plan", value=True)
-            no_car_mode = st.checkbox("🚌 No Car Mode", value=(transport == "ไม่มีรถส่วนตัว"))
-            share_summary = st.checkbox("📤 Share Summary", value=True)
-            extra = st.text_area("รายละเอียดเพิ่มเติม", placeholder="เช่น อยากมีคาเฟ่ ไม่เอาเดินเยอะ อยากได้ที่พักใกล้ทะเล")
+            theme = st.selectbox(
+                "อยากไปเที่ยวไหน",
+                ["ทะเล", "ภูเขา", "ยังไม่แน่ใจ"],
+                key="planner_theme_filter",
+            )
 
-        submitted = st.form_submit_button(
+            province_choice = st.selectbox(
+                "จังหวัดที่สนใจ",
+                get_province_options(theme),
+                key=f"planner_province_choice_{theme}",
+            )
+
+            people = st.number_input(
+                "ไปกี่คน",
+                min_value=1,
+                max_value=30,
+                value=2,
+                step=1,
+                key="planner_people",
+            )
+
+        with c2:
+            days = st.number_input(
+                "ไปกี่วัน",
+                min_value=1,
+                max_value=10,
+                value=2,
+                step=1,
+                key="planner_days",
+            )
+
+            budget = st.number_input(
+                "งบรวมทั้งหมด (บาท)",
+                min_value=0,
+                max_value=5000000,
+                value=5000,
+                step=500,
+                key="planner_budget",
+            )
+
+            style = st.selectbox(
+                "สไตล์งบ",
+                ["ประหยัด", "สมดุล", "สบาย"],
+                key="planner_style",
+            )
+
+        with c3:
+            transport = st.selectbox(
+                "การเดินทาง",
+                ["ไม่มีรถส่วนตัว", "มีรถส่วนตัว", "เครื่องบิน/รถเช่า", "ยังไม่แน่ใจ"],
+                key="planner_transport",
+            )
+
+            crowd = st.selectbox(
+                "เรื่องผู้คน",
+                ["ไม่อยากเจอคนเยอะ", "รับได้ถ้าคนเยอะ", "ยังไงก็ได้"],
+                key="planner_crowd",
+            )
+
+            extra = st.text_area(
+                "รายละเอียดเพิ่มเติม",
+                placeholder="เช่น อยากมีคาเฟ่ ไม่เอาเดินเยอะ อยากได้ที่พักใกล้ทะเล",
+                key="planner_extra",
+            )
+
+        submitted = st.button(
             "✨ ให้ AI วางแผน",
             use_container_width=True,
+            key="planner_submit",
         )
 
     if submitted:
@@ -880,6 +1360,7 @@ unsafe_allow_html=True,
             style=style,
             extra=extra,
         )
+
         picks = recommend_destinations(req)
         selected = req.province if req.province in DESTINATIONS else picks[0]
 
@@ -900,35 +1381,57 @@ unsafe_allow_html=True,
         st.info(status)
 
         st.session_state.history.append(
-            {"province": selected, "theme": theme, "people": int(people), "days": int(days), "budget": int(budget), "style": style}
+            {
+                "province": selected,
+                "theme": theme,
+                "people": int(people),
+                "days": int(days),
+                "budget": int(budget),
+                "style": style,
+            }
         )
-
+        
 with compare_tab:
     st.subheader("เปรียบเทียบสถานที่")
-    compare_filter = st.radio("กรองประเภทสถานที่สำหรับเปรียบเทียบ", ["ทั้งหมด", "ทะเล", "ภูเขา"], horizontal=True, key="compare_filter")
-    compare_options = get_filtered_destinations(compare_filter)
 
-    c1, c2 = st.columns(2)
-    with c1:
-        place_a = st.selectbox("สถานที่ A", compare_options, index=0)
-    with c2:
-        default_b_index = 1 if len(compare_options) > 1 else 0
-        place_b = st.selectbox("สถานที่ B", compare_options, index=default_b_index)
+    compare_options = get_filtered_destinations("ทั้งหมด")
 
-    req_text = st.text_input("เงื่อนไขเพิ่มเติม", placeholder="เช่น งบ 6000 ไม่มีรถส่วนตัว ไม่อยากเจอคนเยอะ")
+    if len(compare_options) < 2:
+        st.warning("ยังมีสถานที่ไม่พอสำหรับการเปรียบเทียบ")
+    else:
+        c1, c2 = st.columns(2)
 
-    if st.button("เปรียบเทียบ", use_container_width=True):
-        st.markdown(compare_destinations(place_a, place_b, req_text))
+        with c1:
+            place_a = st.selectbox(
+                "สถานที่ A",
+                compare_options,
+                index=0,
+                key="compare_place_a",
+            )
+
+        with c2:
+            place_b = st.selectbox(
+                "สถานที่ B",
+                compare_options,
+                index=1 if len(compare_options) > 1 else 0,
+                key="compare_place_b",
+            )
+
+        req_text = st.text_input(
+            "เงื่อนไขเพิ่มเติม",
+            placeholder="เช่น งบ 6000 ไม่มีรถส่วนตัว ไม่อยากเจอคนเยอะ",
+            key="compare_extra_condition",
+        )
+
+        if st.button("เปรียบเทียบ", use_container_width=True):
+            if place_a == place_b:
+                st.warning("กรุณาเลือกสถานที่ A และ B ให้แตกต่างกัน")
+            else:
+                st.markdown(compare_destinations(place_a, place_b, req_text),unsafe_allow_html=True,)
 
 with highlights_tab:
     st.subheader("จังหวัดและไฮไลท์ที่ระบบรู้จัก")
-    filter_type = st.radio(
-        "กรองตามแนวเที่ยว",
-        ["ทั้งหมด", "ทะเล", "ภูเขา"],
-        horizontal=True,
-        key="highlight_filter",
-    )
-
+    filter_type = st.radio("กรองตามแนวเที่ยว", ["ทั้งหมด", "ทะเล", "ภูเขา"], horizontal=True)
     shown = get_filtered_destinations(filter_type)
 
     for i in range(0, len(shown), 2):

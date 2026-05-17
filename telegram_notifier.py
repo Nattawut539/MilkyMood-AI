@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 
 import requests
@@ -8,21 +9,10 @@ from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent
-
-# ใช้สำหรับ local development
-# บน Hugging Face จะอ่านจาก Secrets ผ่าน os.getenv ได้อยู่แล้ว
 load_dotenv(BASE_DIR / ".env")
 
 
 def send_telegram_message(message: str) -> None:
-    """
-    ส่งข้อความเข้า Telegram ผ่าน Bot API
-
-    ต้องมีค่าใน .env หรือ Hugging Face Secrets:
-    - TELEGRAM_BOT_TOKEN
-    - TELEGRAM_CHAT_ID
-    """
-
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -41,31 +31,36 @@ def send_telegram_message(message: str) -> None:
         "disable_web_page_preview": True,
     }
 
-    try:
-        response = requests.post(
-            url,
-            data=payload,
-            timeout=15,
-        )
+    last_error = None
 
-        if not response.ok:
+    # ลองส่ง 3 รอบ เผื่อ Hugging Face หรือ Telegram ช้า
+    for attempt in range(1, 4):
+        try:
+            response = requests.post(
+                url,
+                data=payload,
+                timeout=45,
+            )
+
+            if response.ok:
+                return
+
             raise RuntimeError(
                 f"Telegram ส่งไม่สำเร็จ: {response.status_code} {response.text}"
             )
 
-    except requests.exceptions.Timeout:
-        raise RuntimeError("Telegram ส่งไม่สำเร็จ: request timeout")
+        except requests.exceptions.Timeout as error:
+            last_error = f"request timeout รอบที่ {attempt}"
+            time.sleep(2)
 
-    except requests.exceptions.RequestException as error:
-        raise RuntimeError(f"Telegram ส่งไม่สำเร็จ: {error}")
+        except requests.exceptions.RequestException as error:
+            last_error = str(error)
+            time.sleep(2)
+
+    raise RuntimeError(f"Telegram ส่งไม่สำเร็จ: {last_error}")
 
 
 def test_send() -> None:
-    """
-    ใช้ทดสอบไฟล์นี้โดยตรง:
-    python telegram_notifier.py
-    """
-
     send_telegram_message(
         "🧭 <b>TripMate Thailand AI</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n"

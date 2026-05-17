@@ -829,12 +829,6 @@ with planner_tab:
 
     theme = st.radio("อยากไปเที่ยวไหน", ["ทะเล", "ภูเขา", "ยังไม่แน่ใจ"], horizontal=True, key="theme_radio")
     province_options = get_province_options(theme)
-    available_provinces = province_options[1:]
-
-    st.caption(f"ช่องจังหวัดที่สนใจมีจังหวัดให้เลือก {len(available_provinces)} จังหวัด ซึ่งเป็นชุดเดียวกับหน้าไฮไลท์จังหวัด")
-
-    with st.expander("ดูรายชื่อจังหวัดในหมวดนี้", expanded=False):
-        st.markdown(" ".join([f"<span class='mini-chip'>{province}</span>" for province in available_provinces]), unsafe_allow_html=True)
 
     with st.form("planner_form"):
         c1, c2, c3 = st.columns(3)

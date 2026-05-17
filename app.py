@@ -933,11 +933,37 @@ with highlights_tab:
 
 with chat_tab:
     st.subheader("ถาม AI เพิ่มเติม")
-    question = st.chat_input("เช่น มีงบ 3000 ไม่มีรถส่วนตัว อยากเที่ยวทะเลที่คนไม่เยอะ")
+
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
+
+    chat_panel = st.container(height=520, border=True)
+
+    with chat_panel:
+        if not st.session_state.chat_messages:
+            st.markdown(
+                """
+<div class="chat-empty">
+    <div class="chat-empty-icon">💬</div>
+    <h3>เริ่มคุยกับ Matey ได้เลย</h3>
+    <p>ตัวอย่าง: มีงบ 3000 ไม่มีรถส่วนตัว อยากเที่ยวทะเลที่คนไม่เยอะ</p>
+</div>
+""",
+                unsafe_allow_html=True,
+            )
+
+        for message in st.session_state.chat_messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+    question = st.chat_input("พิมพ์คำถามเกี่ยวกับทริปของคุณที่นี่...")
+
     if question:
-        st.chat_message("user").markdown(question)
+        st.session_state.chat_messages.append({"role": "user", "content": question})
+
         context_chunks = rag.search(question, top_k=5)
         context = "\n---\n".join(context_chunks)
+
         if client:
             prompt = f"""
 คุณคือ Matey ผู้ช่วย AI วางแผนเที่ยวของ TripMate Thailand AI
@@ -957,23 +983,31 @@ with chat_tab:
                 ai_answer = "ตอนนี้เรียก Gemini API ไม่สำเร็จ จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n" + context
         else:
             ai_answer = "ยังไม่ได้ตั้งค่า GOOGLE_API_KEY จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n" + context
-        st.chat_message("assistant").markdown(ai_answer)
+
+        st.session_state.chat_messages.append({"role": "assistant", "content": ai_answer})
+        st.rerun()
+
+    if st.button("ล้างแชท", use_container_width=True):
+        st.session_state.chat_messages = []
+        st.rerun()
 
 with st.sidebar:
     st.markdown("## 🕘 ประวัติแพลน")
     if st.button("ล้างประวัติ", use_container_width=True):
         st.session_state.history = []
         st.rerun()
+
     if not st.session_state.history:
         st.caption("ยังไม่มีแพลนที่สร้างในรอบนี้")
+
     for item in reversed(st.session_state.history[-10:]):
         st.markdown(
             f"""
-            <div style="background:white;border:1px solid #d9eef7;border-radius:16px;padding:12px;margin:8px 0;">
-            <b>{item['province']}</b><br>
-            {item['theme']} | {item['people']} คน | {item['days']} วัน<br>
-            งบ {item['budget']:,} บาท | {item['style']}
-            </div>
-            """,
+<div style="background:white;border:1px solid #d9eef7;border-radius:16px;padding:12px;margin:8px 0;">
+    <b>{item['province']}</b><br>
+    {item['theme']} | {item['people']} คน | {item['days']} วัน<br>
+    งบ {item['budget']:,} บาท | {item['style']}
+</div>
+""",
             unsafe_allow_html=True,
         )

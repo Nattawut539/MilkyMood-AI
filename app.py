@@ -959,7 +959,9 @@ with chat_tab:
     question = st.chat_input("พิมพ์คำถามเกี่ยวกับทริปของคุณที่นี่...")
 
     if question:
-        st.session_state.chat_messages.append({"role": "user", "content": question})
+        st.session_state.chat_messages.append(
+            {"role": "user", "content": question}
+        )
 
         context_chunks = rag.search(question, top_k=5)
         context = "\n---\n".join(context_chunks)
@@ -970,21 +972,39 @@ with chat_tab:
 ตอบเป็นภาษาไทย กระชับ ชัดเจน และใช้ข้อมูลจากฐานความรู้เท่านั้นถ้าเป็นข้อมูลเฉพาะ
 ถ้าเป็นราคา ให้บอกว่าเป็นการประเมินเบื้องต้น
 
-ข้อมูล:
+ข้อมูลจากฐานความรู้:
 {context}
 
-คำถาม:
+คำถามผู้ใช้:
 {question}
-"""
-            try:
-                resp = client.models.generate_content(model=MODEL, contents=prompt)
-                ai_answer = resp.text
-            except Exception:
-                ai_answer = "ตอนนี้เรียก Gemini API ไม่สำเร็จ จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n" + context
-        else:
-            ai_answer = "ยังไม่ได้ตั้งค่า GOOGLE_API_KEY จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n" + context
 
-        st.session_state.chat_messages.append({"role": "assistant", "content": ai_answer})
+ให้ตอบแบบอ่านง่าย มีหัวข้อย่อย และแนะนำอย่างเหมาะสมกับงบ การเดินทาง และสไตล์ของผู้ใช้
+"""
+
+            try:
+                resp = client.models.generate_content(
+                    model=MODEL,
+                    contents=prompt,
+                )
+                ai_answer = resp.text
+
+            except Exception as e:
+                ai_answer = (
+                    f"⚠️ ตอนนี้เรียก Gemini API ไม่สำเร็จ\n\n"
+                    f"**สาเหตุจากระบบ:** `{e}`\n\n"
+                    f"จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n"
+                    f"{context}"
+                )
+        else:
+            ai_answer = (
+                "⚠️ ยังไม่ได้ตั้งค่า `GOOGLE_API_KEY`\n\n"
+                "จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n"
+                + context
+            )
+
+        st.session_state.chat_messages.append(
+            {"role": "assistant", "content": ai_answer}
+        )
         st.rerun()
 
     if st.button("ล้างแชท", use_container_width=True):

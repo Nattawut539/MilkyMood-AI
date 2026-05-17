@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import traceback
 from datetime import datetime
@@ -19,36 +20,60 @@ SCOPES = [
 ]
 
 
-def get_worksheet():
-    # โหลด .env จากโฟลเดอร์เดียวกับไฟล์นี้โดยตรง
-    load_dotenv(BASE_DIR / ".env")
+def get_credentials() -> Credentials:
+    """
+    รองรับ 2 แบบ:
+    1) Local: GOOGLE_SERVICE_ACCOUNT_FILE=credentials.json
+    2) Hugging Face: GOOGLE_SERVICE_ACCOUNT_JSON={...json ทั้งก้อน...}
+    """
+    credentials_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
 
-    sheet_id = os.getenv("GOOGLE_SHEETS_ID")
+    if credentials_json:
+        try:
+            credentials_info = json.loads(credentials_json)
+        except json.JSONDecodeError as error:
+            raise RuntimeError(
+                "GOOGLE_SERVICE_ACCOUNT_JSON ไม่ใช่ JSON ที่ถูกต้อง "
+                "ให้ตรวจสอบว่า copy JSON service account มาครบทั้งก้อน"
+            ) from error
+
+        return Credentials.from_service_account_info(
+            credentials_info,
+            scopes=SCOPES,
+        )
+
     credentials_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "credentials.json")
-
-    # แปลงชื่อไฟล์ credentials ให้เป็น path ที่ชัดเจน
     credentials_path = Path(credentials_file)
 
-    # ถ้าใน .env ใส่แค่ credentials.json ให้ไปหาในโฟลเดอร์โปรเจกต์
     if not credentials_path.is_absolute():
         credentials_path = BASE_DIR / credentials_path
 
-    if not sheet_id:
-        raise RuntimeError("ไม่พบ GOOGLE_SHEETS_ID ในไฟล์ .env")
-
     if not credentials_path.exists():
-        raise RuntimeError(f"ไม่พบไฟล์ credentials: {credentials_path}")
+        raise RuntimeError(
+            f"ไม่พบไฟล์ credentials: {credentials_path}\n"
+            "ถ้ารันบนเครื่อง ให้ตั้ง GOOGLE_SERVICE_ACCOUNT_FILE=credentials.json\n"
+            "ถ้ารันบน Hugging Face ให้ตั้ง GOOGLE_SERVICE_ACCOUNT_JSON เป็น JSON ทั้งก้อน"
+        )
 
-    credentials = Credentials.from_service_account_file(
+    return Credentials.from_service_account_file(
         str(credentials_path),
         scopes=SCOPES,
     )
 
+
+def get_worksheet():
+    load_dotenv(BASE_DIR / ".env")
+
+    sheet_id = os.getenv("GOOGLE_SHEETS_ID")
+
+    if not sheet_id:
+        raise RuntimeError("ไม่พบ GOOGLE_SHEETS_ID ใน .env หรือ Hugging Face Secrets")
+
+    credentials = get_credentials()
     client = gspread.authorize(credentials)
     spreadsheet = client.open_by_key(sheet_id)
-    worksheet = spreadsheet.sheet1
 
-    return worksheet
+    return spreadsheet.sheet1
 
 
 def ensure_header(worksheet):

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import requests
 from collections import Counter
 from datetime import datetime
+from pathlib import Path
 
 import gspread
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 
+
+BASE_DIR = Path(__file__).resolve().parent
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -17,28 +21,60 @@ SCOPES = [
 ]
 
 
-def get_worksheet():
-    load_dotenv()
+def get_credentials() -> Credentials:
+    """
+    รองรับ 2 แบบ:
+    1) Local: GOOGLE_SERVICE_ACCOUNT_FILE=credentials.json
+    2) Hugging Face: GOOGLE_SERVICE_ACCOUNT_JSON={...json ทั้งก้อน...}
+    """
+    credentials_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
 
-    sheet_id = os.getenv("GOOGLE_SHEETS_ID")
+    if credentials_json:
+        try:
+            credentials_info = json.loads(credentials_json)
+        except json.JSONDecodeError as error:
+            raise RuntimeError(
+                "GOOGLE_SERVICE_ACCOUNT_JSON ไม่ใช่ JSON ที่ถูกต้อง "
+                "ให้ตรวจสอบว่า copy JSON service account มาครบทั้งก้อน"
+            ) from error
+
+        return Credentials.from_service_account_info(
+            credentials_info,
+            scopes=SCOPES,
+        )
+
     credentials_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "credentials.json")
+    credentials_path = Path(credentials_file)
 
-    if not sheet_id:
-        raise RuntimeError("ไม่พบ GOOGLE_SHEETS_ID ในไฟล์ .env")
+    if not credentials_path.is_absolute():
+        credentials_path = BASE_DIR / credentials_path
 
-    if not os.path.exists(credentials_file):
-        raise RuntimeError(f"ไม่พบไฟล์ credentials: {credentials_file}")
+    if not credentials_path.exists():
+        raise RuntimeError(
+            f"ไม่พบไฟล์ credentials: {credentials_path}\n"
+            "ถ้ารันบนเครื่อง ให้ตั้ง GOOGLE_SERVICE_ACCOUNT_FILE=credentials.json\n"
+            "ถ้ารันบน Hugging Face ให้ตั้ง GOOGLE_SERVICE_ACCOUNT_JSON เป็น JSON ทั้งก้อน"
+        )
 
-    credentials = Credentials.from_service_account_file(
-        credentials_file,
+    return Credentials.from_service_account_file(
+        str(credentials_path),
         scopes=SCOPES,
     )
 
+
+def get_worksheet():
+    load_dotenv(BASE_DIR / ".env")
+
+    sheet_id = os.getenv("GOOGLE_SHEETS_ID")
+
+    if not sheet_id:
+        raise RuntimeError("ไม่พบ GOOGLE_SHEETS_ID ใน .env หรือ Hugging Face Secrets")
+
+    credentials = get_credentials()
     client = gspread.authorize(credentials)
     spreadsheet = client.open_by_key(sheet_id)
-    worksheet = spreadsheet.sheet1
 
-    return worksheet
+    return spreadsheet.sheet1
 
 
 def safe_int(value, default: int = 0) -> int:
@@ -87,21 +123,11 @@ def summarize_for_date(rows: list[dict], target_date: str) -> dict:
         total_days += days
         total_budget += budget
 
-    top_destination = "-"
-    if destination_counter:
-        top_destination = destination_counter.most_common(1)[0][0]
+    top_destination = destination_counter.most_common(1)[0][0] if destination_counter else "-"
+    top_trip_type = trip_type_counter.most_common(1)[0][0] if trip_type_counter else "-"
+    top_style = style_counter.most_common(1)[0][0] if style_counter else "-"
 
-    top_trip_type = "-"
-    if trip_type_counter:
-        top_trip_type = trip_type_counter.most_common(1)[0][0]
-
-    top_style = "-"
-    if style_counter:
-        top_style = style_counter.most_common(1)[0][0]
-
-    avg_budget = 0
-    if today_rows:
-        avg_budget = total_budget / len(today_rows)
+    avg_budget = total_budget / len(today_rows) if today_rows else 0
 
     return {
         "date": target_date,
@@ -135,17 +161,18 @@ def build_report(summary: dict) -> str:
         "✅ รายงานนี้สรุปจากข้อมูลใน Google Sheet"
     )
 
+
 def send_telegram_alert(message: str) -> None:
-    load_dotenv()
+    load_dotenv(BASE_DIR / ".env")
 
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
     if not bot_token:
-        raise RuntimeError("ไม่พบ TELEGRAM_BOT_TOKEN ในตัวแปรสภาพแวดล้อม")
+        raise RuntimeError("ไม่พบ TELEGRAM_BOT_TOKEN ใน .env หรือ Hugging Face Secrets")
 
     if not chat_id:
-        raise RuntimeError("ไม่พบ TELEGRAM_CHAT_ID ในตัวแปรสภาพแวดล้อม")
+        raise RuntimeError("ไม่พบ TELEGRAM_CHAT_ID ใน .env หรือ Hugging Face Secrets")
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
@@ -157,12 +184,12 @@ def send_telegram_alert(message: str) -> None:
                 "text": message,
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True,
-                },
+            },
             timeout=15,
-            )
+        )
         response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"ล้มเหลวในการส่ง Telegram: {e}")
+    except requests.exceptions.RequestException as error:
+        raise RuntimeError(f"ล้มเหลวในการส่ง Telegram: {error}") from error
 
 
 def main():

@@ -589,9 +589,17 @@ def render_ai_answer(answer: str) -> None:
         st.markdown(answer)
         
 
-def get_province_options() -> list[str]:
-    return ["ยังไม่ระบุ"] + sorted(DESTINATIONS.keys())
+def get_province_options(theme: str) -> list[str]:
+    if theme == "ยังไม่แน่ใจ":
+        filtered = sorted(DESTINATIONS.keys())
+    else:
+        filtered = sorted(
+            province
+            for province, data in DESTINATIONS.items()
+            if theme in data["type"]
+        )
 
+    return ["ยังไม่ระบุ"] + filtered
 
 
 def render_trip_overview(req: TripRequest, province: str) -> None:
@@ -830,7 +838,7 @@ with planner_tab:
     </p>
 </div>
 """,
-        unsafe_allow_html=True,
+unsafe_allow_html=True,
     )
 
     theme = st.radio("อยากไปเที่ยวไหน", ["ทะเล", "ภูเขา", "ยังไม่แน่ใจ"], horizontal=True, key="theme_radio")

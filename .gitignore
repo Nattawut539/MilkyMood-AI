@@ -232,3 +232,4 @@ credentials.b64
 # Agent trace logs
 agent_trace.log
 trace_logs/
+credentials.json

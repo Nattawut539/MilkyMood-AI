@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import random
 import re
+import math
 from dataclasses import dataclass
 from typing import Any
 
@@ -254,12 +255,92 @@ STYLE_NOTES = {
     "สมดุล": "เที่ยวครบพอดี ไม่อัดแน่นเกินไป ที่พักสะดวกและยังคุมงบได้",
     "สบาย": "เน้นความสะดวก ที่พักดี เดินทางไม่เร่ง และมีเวลาพักผ่อน",
 }
+THAI_PROVINCE_COORDS: dict[str, tuple[float, float]] = {
+    "กรุงเทพมหานคร": (13.7563, 100.5018),
+    "กระบี่": (8.0863, 98.9063),
+    "กาญจนบุรี": (14.0228, 99.5328),
+    "กาฬสินธุ์": (16.4314, 103.5059),
+    "กำแพงเพชร": (16.4828, 99.5220),
+    "ขอนแก่น": (16.4419, 102.8350),
+    "จันทบุรี": (12.6113, 102.1039),
+    "ฉะเชิงเทรา": (13.6904, 101.0779),
+    "ชลบุรี": (13.3611, 100.9847),
+    "ชัยนาท": (15.1852, 100.1251),
+    "ชัยภูมิ": (15.8068, 102.0315),
+    "ชุมพร": (10.4930, 99.1800),
+    "เชียงราย": (19.9105, 99.8406),
+    "เชียงใหม่": (18.7883, 98.9853),
+    "ตรัง": (7.5594, 99.6114),
+    "ตราด": (12.2428, 102.5175),
+    "ตาก": (16.8839, 99.1258),
+    "นครนายก": (14.2069, 101.2131),
+    "นครปฐม": (13.8199, 100.0622),
+    "นครพนม": (17.3920, 104.7696),
+    "นครราชสีมา": (14.9799, 102.0977),
+    "นครศรีธรรมราช": (8.4304, 99.9631),
+    "นครสวรรค์": (15.7047, 100.1372),
+    "นนทบุรี": (13.8621, 100.5144),
+    "นราธิวาส": (6.4255, 101.8253),
+    "น่าน": (18.7756, 100.7730),
+    "บึงกาฬ": (18.3609, 103.6464),
+    "บุรีรัมย์": (14.9930, 103.1029),
+    "ปทุมธานี": (14.0208, 100.5250),
+    "ประจวบคีรีขันธ์": (11.8124, 99.7974),
+    "ปราจีนบุรี": (14.0509, 101.3727),
+    "ปัตตานี": (6.8695, 101.2501),
+    "พระนครศรีอยุธยา": (14.3692, 100.5877),
+    "พะเยา": (19.1665, 99.9019),
+    "พังงา": (8.4501, 98.5255),
+    "พัทลุง": (7.6167, 100.0740),
+    "พิจิตร": (16.4429, 100.3488),
+    "พิษณุโลก": (16.8211, 100.2659),
+    "เพชรบุรี": (13.1112, 99.9397),
+    "เพชรบูรณ์": (16.4190, 101.1606),
+    "แพร่": (18.1446, 100.1403),
+    "ภูเก็ต": (7.8804, 98.3923),
+    "มหาสารคาม": (16.1851, 103.3026),
+    "มุกดาหาร": (16.5453, 104.7235),
+    "แม่ฮ่องสอน": (19.3020, 97.9654),
+    "ยโสธร": (15.7926, 104.1453),
+    "ยะลา": (6.5411, 101.2804),
+    "ร้อยเอ็ด": (16.0538, 103.6520),
+    "ระนอง": (9.9529, 98.6085),
+    "ระยอง": (12.6814, 101.2816),
+    "ราชบุรี": (13.5283, 99.8134),
+    "ลพบุรี": (14.7995, 100.6534),
+    "ลำปาง": (18.2888, 99.4909),
+    "ลำพูน": (18.5745, 99.0087),
+    "เลย": (17.4860, 101.7223),
+    "ศรีสะเกษ": (15.1186, 104.3220),
+    "สกลนคร": (17.1546, 104.1348),
+    "สงขลา": (7.1898, 100.5951),
+    "สตูล": (6.6238, 100.0674),
+    "สมุทรปราการ": (13.5991, 100.5998),
+    "สมุทรสงคราม": (13.4098, 100.0023),
+    "สมุทรสาคร": (13.5475, 100.2744),
+    "สระแก้ว": (13.8240, 102.0646),
+    "สระบุรี": (14.5289, 100.9101),
+    "สิงห์บุรี": (14.8936, 100.3967),
+    "สุโขทัย": (17.0056, 99.8264),
+    "สุพรรณบุรี": (14.4745, 100.1177),
+    "สุราษฎร์ธานี": (9.1382, 99.3215),
+    "สุรินทร์": (14.8818, 103.4936),
+    "หนองคาย": (17.8783, 102.7413),
+    "หนองบัวลำภู": (17.2218, 102.4260),
+    "อ่างทอง": (14.5896, 100.4551),
+    "อำนาจเจริญ": (15.8657, 104.6258),
+    "อุดรธานี": (17.4138, 102.7872),
+    "อุตรดิตถ์": (17.6200, 100.0993),
+    "อุทัยธานี": (15.3835, 100.0246),
+    "อุบลราชธานี": (15.2448, 104.8473),
+}
 
 
 @dataclass
 class TripRequest:
     theme: str
     province: str
+    origin_province: str
     people: int
     days: int
     budget: int
@@ -267,10 +348,55 @@ class TripRequest:
     crowd: str
     style: str
     extra: str
-
+    
 
 def money(value: float) -> str:
     return f"{value:,.0f} บาท"
+
+def estimate_trip_distance(origin: str, destination: str) -> dict[str, float | str]:
+    """
+    คำนวณระยะทางโดยประมาณจากพิกัดกลางจังหวัด
+    - straight_km = ระยะเส้นตรง
+    - road_km = ประมาณระยะทางถนน โดยคูณ 1.25
+    """
+
+    if origin not in THAI_PROVINCE_COORDS or destination not in THAI_PROVINCE_COORDS:
+        return {
+            "origin": origin,
+            "destination": destination,
+            "straight_km": 0,
+            "road_km": 0,
+            "note": "ไม่มีข้อมูลพิกัดสำหรับคำนวณระยะทาง",
+        }
+
+    import math
+
+    lat1, lon1 = THAI_PROVINCE_COORDS[origin]
+    lat2, lon2 = THAI_PROVINCE_COORDS[destination]
+
+    radius_km = 6371
+
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+
+    a = (
+        math.sin(d_lat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(d_lon / 2) ** 2
+    )
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    straight_km = radius_km * c
+    road_km = straight_km * 1.25
+
+    return {
+        "origin": origin,
+        "destination": destination,
+        "straight_km": round(straight_km, 1),
+        "road_km": round(road_km, 1),
+        "note": "เป็นระยะทางโดยประมาณจากพิกัดกลางจังหวัด ไม่ใช่ระยะทาง real-time",
+    }
 
 
 def recommend_destinations(req: TripRequest) -> list[str]:
@@ -351,12 +477,16 @@ def build_fallback_plan(req: TripRequest, province: str) -> str:
     budget = estimate_budget(req)
     score, reasons = match_score(req, province)
     nights = max(req.days - 1, 0)
+    distance = estimate_trip_distance(req.origin_province, province)
 
     lines = [
-        f"## 🧭 แพลนแนะนำ: {province}",
-        f"**Trip Match Score:** {score:.1f}/10",
-        "",
-        "**เหตุผลที่เหมาะ:**",
+    f"## 🧭 แพลนแนะนำ: {province}",
+    f"**ต้นทาง:** {req.origin_province} → **ปลายทาง:** {province}",
+    f"**ระยะทางโดยประมาณ:** {distance['road_km']} กม. ทางถนน / {distance['straight_km']} กม. เส้นตรง",
+    f"**หมายเหตุระยะทาง:** {distance['note']}",
+    f"**Trip Match Score:** {score:.1f}/10",
+    "",
+    "**เหตุผลที่เหมาะ:**",
     ]
     lines += [f"- {r}" for r in reasons]
     lines += [
@@ -619,6 +749,7 @@ def render_trip_overview(req: TripRequest, province: str) -> None:
     data = DESTINATIONS[province]
     score, reasons = match_score(req, province)
     nights = max(req.days - 1, 0)
+    distance = estimate_trip_distance(req.origin_province, province)
     tags = "".join([f"<span class='mini-tag'>{tag}</span>" for tag in data["type"]])
     reason_html = "".join([f"<li>{reason}</li>" for reason in reasons[:4]])
     st.markdown(f"""
@@ -628,6 +759,9 @@ def render_trip_overview(req: TripRequest, province: str) -> None:
     <h2>แพลนแนะนำ: {province}</h2>
     <div>{tags}</div>
     <p>{data['best_for']}</p>
+    <div class="distance-chip">
+        🚗 {req.origin_province} → {province} ประมาณ {distance['road_km']} กม.
+    </div>
     <ul>{reason_html}</ul>
   </div>
   <div class="plan-score-box">
@@ -1244,6 +1378,18 @@ st.markdown(
         .hero::after {
             display: none;
         }
+    .distance-chip {
+        display: inline-block;
+        margin: 6px 0 10px;
+        padding: 9px 14px;
+        border-radius: 999px;
+        background: #f2f8fb;
+        border: 1px solid #d9eef7;
+        color: #0f5e86;
+        font-size: 14px;
+        font-weight: 800;
+    }
+    
     }
     </style>
     <div class="hero">
@@ -1277,6 +1423,13 @@ with planner_tab:
         c1, c2, c3 = st.columns(3)
 
         with c1:
+            origin_province = st.selectbox(
+                "ต้นทางที่เริ่มเดินทาง",
+                sorted(THAI_PROVINCE_COORDS.keys()),
+                index=sorted(THAI_PROVINCE_COORDS.keys()).index("กรุงเทพมหานคร"),
+                key="planner_origin_province",
+            )
+
             theme = st.selectbox(
                 "อยากไปเที่ยวไหน",
                 ["ทะเล", "ภูเขา", "ยังไม่แน่ใจ"],
@@ -1289,6 +1442,7 @@ with planner_tab:
                 key=f"planner_province_choice_{theme}",
             )
 
+        with c2:
             people = st.number_input(
                 "ไปกี่คน",
                 min_value=1,
@@ -1298,7 +1452,6 @@ with planner_tab:
                 key="planner_people",
             )
 
-        with c2:
             days = st.number_input(
                 "ไปกี่วัน",
                 min_value=1,
@@ -1322,7 +1475,7 @@ with planner_tab:
                 ["ประหยัด", "สมดุล", "สบาย"],
                 key="planner_style",
             )
-
+            
         with c3:
             transport = st.selectbox(
                 "การเดินทาง",
@@ -1352,6 +1505,7 @@ with planner_tab:
         req = TripRequest(
             theme=theme,
             province="" if province_choice == "ยังไม่ระบุ" else province_choice,
+            origin_province=origin_province,
             people=int(people),
             days=int(days),
             budget=int(budget),
@@ -1473,11 +1627,17 @@ with chat_tab:
             {"role": "user", "content": question}
         )
 
-        context_chunks = rag.search(question, top_k=5)
-        context = "\n---\n".join(context_chunks)
+        with chat_panel:
+            with st.chat_message("user"):
+                st.markdown(question)
 
-        if client:
-            prompt = f"""
+            with st.chat_message("assistant"):
+                with st.spinner("Matey กำลังคิดคำตอบ..."):
+                    context_chunks = rag.search(question, top_k=5)
+                    context = "\n---\n".join(context_chunks)
+
+                    if client:
+                        prompt = f"""
 คุณคือ Matey ผู้ช่วย AI วางแผนเที่ยวของ TripMate Thailand AI
 ตอบเป็นภาษาไทย กระชับ ชัดเจน และใช้ข้อมูลจากฐานความรู้เท่านั้นถ้าเป็นข้อมูลเฉพาะ
 ถ้าเป็นราคา ให้บอกว่าเป็นการประเมินเบื้องต้น
@@ -1491,26 +1651,41 @@ with chat_tab:
 ให้ตอบแบบอ่านง่าย มีหัวข้อย่อย และแนะนำอย่างเหมาะสมกับงบ การเดินทาง และสไตล์ของผู้ใช้
 """
 
-            try:
-                resp = client.models.generate_content(
-                    model=MODEL,
-                    contents=prompt,
-                )
-                ai_answer = resp.text
+                        try:
+                            resp = client.models.generate_content(
+                                model=MODEL,
+                                contents=prompt,
+                            )
+                            ai_answer = resp.text
 
-            except Exception as e:
-                ai_answer = (
-                    f"⚠️ ตอนนี้เรียก Gemini API ไม่สำเร็จ\n\n"
-                    f"**สาเหตุจากระบบ:** `{e}`\n\n"
-                    f"จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n"
-                    f"{context}"
-                )
-        else:
-            ai_answer = (
-                "⚠️ ยังไม่ได้ตั้งค่า `GOOGLE_API_KEY`\n\n"
-                "จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n"
-                + context
-            )
+                        except Exception as e:
+                            error_text = str(e)
+
+                            if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+                                ai_answer = (
+                                    "⚠️ **ตอนนี้โควตา Gemini API หมดชั่วคราว**\n\n"
+                                    "แต่ Matey ยังสามารถช่วยแนะนำจากฐานความรู้ของระบบได้ครับ\n\n"
+                                    "## 🧭 คำแนะนำจากฐานความรู้\n\n"
+                                    f"{context}\n\n"
+                                    "## ✅ หมายเหตุ\n"
+                                    "- คำตอบนี้เป็นข้อมูลจากฐานความรู้ที่เตรียมไว้ในระบบ\n"
+                                    "- ราคาและแผนเที่ยวเป็นการประเมินเบื้องต้น\n"
+                                    "- ก่อนเดินทางจริงควรตรวจสอบราคา เวลาเปิด-ปิด และการเดินทางอีกครั้ง"
+                                )
+                            else:
+                                ai_answer = (
+                                    "⚠️ **ตอนนี้ระบบ AI ภายนอกเรียกใช้งานไม่สำเร็จ**\n\n"
+                                    "ระบบจึงแสดงข้อมูลจากฐานความรู้ของ TripMate แทนก่อน\n\n"
+                                    f"{context}"
+                                )
+                    else:
+                        ai_answer = (
+                            "⚠️ ยังไม่ได้ตั้งค่า `GOOGLE_API_KEY`\n\n"
+                            "จึงแสดงข้อมูลจากฐานความรู้แทน:\n\n"
+                            + context
+                        )
+
+                    st.markdown(ai_answer)
 
         st.session_state.chat_messages.append(
             {"role": "assistant", "content": ai_answer}
